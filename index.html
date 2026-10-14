@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#354f37">
+    <title>Oat</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+      :root {
+        color-scheme: dark;
+        --forest: #354f37;
+        --gold: #f5d500;
+        --cream: #f2f0e8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-width: 320px;
+        min-height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: var(--forest);
+      }
+
+      .page {
+        position: relative;
+        display: grid;
+        width: 100%;
+        min-height: 100svh;
+        overflow: hidden;
+        isolation: isolate;
+        place-items: center;
+        background: radial-gradient(ellipse at center, rgb(255 255 255 / 4%), transparent 64%), var(--forest);
+        background-color: #050705;
+        transition: background-color 1.1s ease-in-out;
+      }
+
+      .page.revealed {
+        background-color: var(--forest);
+      }
+
+      .page.code-active {
+        background-color: #050705;
+      }
+
+      .code-flow {
+        position: absolute;
+        z-index: 0;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 700ms ease-in-out;
+      }
+
+      .code-flow.active {
+        opacity: 0.76;
+      }
+
+      .art {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        width: min(76vmin, 560px);
+        aspect-ratio: 1;
+        opacity: 0;
+        place-items: center;
+        transform: translateY(18px) scale(0.94);
+        transition: opacity 1.3s ease-out, transform 1.3s cubic-bezier(0.2, 0.7, 0.25, 1);
+      }
+
+      .page.revealed .art {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      .art::before,
+      .art::after {
+        position: absolute;
+        aspect-ratio: 1;
+        border: 1px solid rgb(242 240 232 / 13%);
+        border-radius: 50%;
+        content: "";
+      }
+
+      .art::before {
+        inset: 0;
+      }
+
+      .art::after {
+        inset: 12%;
+        border-color: rgb(242 240 232 / 11%);
+      }
+
+      .oat {
+        position: relative;
+        z-index: 1;
+        width: 62%;
+        overflow: visible;
+        filter: drop-shadow(0 16px 22px rgb(26 39 27 / 14%));
+      }
+
+      .stalk {
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+        animation: draw 1.3s 0.15s ease-out forwards;
+      }
+
+      .grain {
+        transform-box: fill-box;
+        transform-origin: 12% 82%;
+        animation: sway 4.5s ease-in-out infinite;
+      }
+
+      .grain:nth-of-type(2) { animation-delay: -0.45s; }
+      .grain:nth-of-type(3) { animation-delay: -0.9s; }
+      .grain:nth-of-type(4) { animation-delay: -1.35s; }
+      .grain:nth-of-type(5) { animation-delay: -1.8s; }
+      .grain:nth-of-type(6) { animation-delay: -2.25s; }
+
+      @keyframes sway {
+        0%, 100% { transform: rotate(-1.8deg); }
+        50% { transform: rotate(2.4deg); }
+      }
+
+      @keyframes draw {
+        to { stroke-dashoffset: 0; }
+      }
+
+      @media (max-width: 600px) {
+        .art {
+          width: min(86vmin, 480px);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+
+        .stalk {
+          stroke-dashoffset: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <canvas class="code-flow" aria-hidden="true"></canvas>
+      <div class="art" aria-hidden="true">
+        <svg class="oat" viewBox="0 0 260 340" xmlns="http://www.w3.org/2000/svg">
+          <g fill="none" stroke="#f5d500" stroke-linecap="round" stroke-width="5">
+            <path class="stalk" pathLength="1" d="M126 319C126 255 126 193 128 120C129 82 132 49 140 22"/>
+          </g>
+          <g class="grain" fill="#f5d500">
+            <path d="M132 77C101 66 82 48 76 18C101 22 123 37 137 61C143 73 142 81 132 77Z"/>
+            <path d="M137 87C149 54 169 35 199 27C196 52 181 75 156 91C145 98 135 98 137 87Z"/>
+          </g>
+          <g class="grain" fill="#f5d500">
+            <path d="M128 126C96 118 74 101 64 72C90 73 114 84 132 106C140 117 139 128 128 126Z"/>
+            <path d="M137 137C146 105 165 84 194 73C193 99 180 122 157 139C147 147 137 147 137 137Z"/>
+          </g>
+          <g class="grain" fill="#f2f0e8">
+            <path d="M124 176C94 170 73 155 61 128C86 127 110 137 129 157C138 167 136 178 124 176Z"/>
+            <path d="M138 188C146 158 163 138 191 127C190 151 177 174 156 190C146 198 137 198 138 188Z"/>
+          </g>
+          <g class="grain" fill="#f5d500">
+            <path d="M124 226C98 221 79 208 68 184C90 182 112 191 129 208C137 217 135 228 124 226Z"/>
+            <path d="M137 239C144 211 159 192 184 182C183 204 171 224 152 240C143 247 136 247 137 239Z"/>
+          </g>
+          <g class="grain" fill="#f2f0e8">
+            <path d="M124 273C102 268 85 256 75 235C95 233 114 241 129 256C136 265 134 275 124 273Z"/>
+            <path d="M136 284C142 260 156 243 178 234C177 253 166 271 150 285C142 292 135 292 136 284Z"/>
+          </g>
+        </svg>
+      </div>
+    </main>
+    <script>
+      (() => {
+        const page = document.querySelector(".page");
+        const canvas = document.querySelector(".code-flow");
+        const context = canvas.getContext("2d");
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const glyphs = "アイウエオカキクケコサシスセソタチツテトナニヌネノ012345789";
+        let columns = [];
+        let frame = 0;
+        let timer = 0;
+
+        const resize = () => {
+          const ratio = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = Math.floor(window.innerWidth * ratio);
+          canvas.height = Math.floor(window.innerHeight * ratio);
+          canvas.style.width = `${window.innerWidth}px`;
+          canvas.style.height = `${window.innerHeight}px`;
+          context.setTransform(ratio, 0, 0, ratio, 0, 0);
+          columns = Array.from(
+            { length: Math.ceil(window.innerWidth / 18) },
+            () => Math.random() * -window.innerHeight / 15,
+          );
+        };
+
+        const flash = (duration, onComplete = schedule) => {
+          canvas.classList.add("active");
+          page.classList.add("code-active");
+          const started = performance.now();
+
+          const draw = (now) => {
+            context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            context.font = "13px monospace";
+            context.textAlign = "center";
+
+            columns.forEach((y, index) => {
+              const x = index * 18 + 9;
+              for (let row = 0; row < 7; row += 1) {
+                const glyph = glyphs[Math.floor(Math.random() * glyphs.length)];
+                context.fillStyle = row === 0
+                  ? "rgba(245, 213, 0, 0.78)"
+                  : `rgba(176, 224, 178, ${0.42 - row * 0.045})`;
+                context.fillText(glyph, x, (y - row) * 15);
+              }
+              columns[index] = y > window.innerHeight / 15 + 7
+                ? Math.random() * -18
+                : y + 0.72 + Math.random() * 0.4;
+            });
+
+            if (now - started < duration) {
+              frame = window.requestAnimationFrame(draw);
+            } else {
+              window.cancelAnimationFrame(frame);
+              canvas.classList.remove("active");
+              page.classList.remove("code-active");
+              window.setTimeout(() => {
+                context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+              }, 700);
+              onComplete();
+            }
+          };
+
+          frame = window.requestAnimationFrame(draw);
+        };
+
+        const startNextFlash = () => {
+          if (reducedMotion.matches || document.hidden) {
+            schedule();
+            return;
+          }
+
+          flash(2800);
+        };
+
+        const schedule = () => {
+          window.clearTimeout(timer);
+          timer = window.setTimeout(startNextFlash, 9000 + Math.random() * 9000);
+        };
+
+        resize();
+        window.addEventListener("resize", resize);
+        reducedMotion.addEventListener("change", () => {
+          if (reducedMotion.matches) {
+            window.clearTimeout(timer);
+            window.cancelAnimationFrame(frame);
+            context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            canvas.classList.remove("active");
+            page.classList.remove("code-active");
+            page.classList.add("revealed");
+          } else {
+            schedule();
+          }
+        });
+
+        if (reducedMotion.matches) {
+          page.classList.add("revealed");
+        } else {
+          flash(2800, () => {
+            page.classList.add("revealed");
+            schedule();
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>
