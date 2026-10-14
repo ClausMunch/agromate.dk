@@ -105,6 +105,8 @@
         width: 62%;
         overflow: visible;
         filter: drop-shadow(0 16px 22px rgb(26 39 27 / 14%));
+        transform-box: fill-box;
+        transform-origin: 50% 94%;
       }
 
       .stalk {
@@ -116,18 +118,31 @@
       .grain {
         transform-box: fill-box;
         transform-origin: 12% 82%;
-        animation: sway 4.5s ease-in-out infinite;
       }
 
-      .grain:nth-of-type(2) { animation-delay: -0.45s; }
-      .grain:nth-of-type(3) { animation-delay: -0.9s; }
-      .grain:nth-of-type(4) { animation-delay: -1.35s; }
-      .grain:nth-of-type(5) { animation-delay: -1.8s; }
-      .grain:nth-of-type(6) { animation-delay: -2.25s; }
+      .oat.is-waving {
+        animation: oat-push 900ms cubic-bezier(0.2, 0.7, 0.25, 1);
+      }
 
-      @keyframes sway {
-        0%, 100% { transform: rotate(-1.8deg); }
-        50% { transform: rotate(2.4deg); }
+      .oat.is-waving .grain {
+        animation: grain-wave 850ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+      }
+
+      .oat.is-waving .grain:nth-of-type(3) { animation-delay: 80ms; }
+      .oat.is-waving .grain:nth-of-type(4) { animation-delay: 160ms; }
+      .oat.is-waving .grain:nth-of-type(5) { animation-delay: 240ms; }
+      .oat.is-waving .grain:nth-of-type(6) { animation-delay: 320ms; }
+
+      @keyframes oat-push {
+        20% { transform: rotate(calc(var(--push-direction) * 5deg)); }
+        60% { transform: rotate(calc(var(--push-direction) * -2deg)); }
+        100% { transform: rotate(0); }
+      }
+
+      @keyframes grain-wave {
+        20% { transform: rotate(calc(var(--push-direction) * 8deg)); }
+        65% { transform: rotate(calc(var(--push-direction) * -4deg)); }
+        100% { transform: rotate(0); }
       }
 
       @keyframes draw {
@@ -190,11 +205,12 @@
         const page = document.querySelector(".page");
         const canvas = document.querySelector(".code-flow");
         const context = canvas.getContext("2d");
+        const art = document.querySelector(".art");
+        const oat = document.querySelector(".oat");
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
         const glyphs = "アイウエオカキクケコサシスセソタチツテトナニヌネノ012345789";
         let columns = [];
         let frame = 0;
-        let timer = 0;
 
         const resize = () => {
           const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -209,7 +225,7 @@
           );
         };
 
-        const flash = (duration, onComplete = schedule) => {
+        const flash = (duration, onComplete) => {
           canvas.classList.add("active");
           page.classList.add("code-active");
           const started = performance.now();
@@ -249,32 +265,38 @@
           frame = window.requestAnimationFrame(draw);
         };
 
-        const startNextFlash = () => {
-          if (reducedMotion.matches || document.hidden) {
-            schedule();
+        resize();
+        window.addEventListener("resize", resize);
+        art.addEventListener("pointermove", (event) => {
+          const bounds = oat.getBoundingClientRect();
+          if (
+            event.pointerType !== "mouse"
+            || event.clientX < bounds.left
+            || event.clientX > bounds.right
+            || event.clientY < bounds.top
+            || event.clientY > bounds.bottom
+            || oat.classList.contains("is-waving")
+          ) {
             return;
           }
 
-          flash(2800);
-        };
+          const direction = event.movementX === 0
+            ? (event.clientX < bounds.left + bounds.width / 2 ? -1 : 1)
+            : Math.sign(event.movementX);
+          oat.style.setProperty("--push-direction", direction);
+          oat.classList.add("is-waving");
+          window.setTimeout(() => {
+            oat.classList.remove("is-waving");
+          }, 1500);
+        });
 
-        const schedule = () => {
-          window.clearTimeout(timer);
-          timer = window.setTimeout(startNextFlash, 9000 + Math.random() * 9000);
-        };
-
-        resize();
-        window.addEventListener("resize", resize);
         reducedMotion.addEventListener("change", () => {
           if (reducedMotion.matches) {
-            window.clearTimeout(timer);
             window.cancelAnimationFrame(frame);
             context.clearRect(0, 0, window.innerWidth, window.innerHeight);
             canvas.classList.remove("active");
             page.classList.remove("code-active");
             page.classList.add("revealed");
-          } else {
-            schedule();
           }
         });
 
@@ -283,7 +305,6 @@
         } else {
           flash(2800, () => {
             page.classList.add("revealed");
-            schedule();
           });
         }
       })();
