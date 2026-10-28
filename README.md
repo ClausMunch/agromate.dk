@@ -19,3 +19,7 @@ Start at the title screen, enter your farmer’s name, and press Play. Returning
 The farmer has front, back, left, and right views matching movement. After a short pause, the farmer turns toward the camera and starts breathing and blinking. The turn also updates the direction used by Space interactions. Reduced-motion mode skips the animated turn and breathing.
 
 The fullscreen title features an original pixel-art landscape, drifting clouds, passing birds, and a wooden Agromate sign. Enter a name and Play, or Continue a saved farm. Use the explicit **Title screen** button in the game header (or the logo) to save and return to the menu. The title scene animates only while open and visible, and respects reduced-motion preferences.
+
+Kris the seagull periodically flies in, lands beside the garden, and takes off again. Hover over Kris to see his name, or click/tap him to get “hey hey.” The seagull also supports keyboard focus and activation. Hovering over your farmer shows the name from your profile. Seagull visits pause with gameplay; reduced-motion mode keeps Kris resting on the farm.
+
+The title landscape also hosts occasional duck flyovers and a tabby strolling across the foreground. With reduced motion enabled, flights are omitted and the cat rests in place.

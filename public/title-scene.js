@@ -78,6 +78,43 @@
     for(const [xx,yy,w,h,col]of [[0,8,56,13,'#d8e9d6'],[5,2,43,17,'#edf2d9'],[13,-5,18,19,'#f8f4dc'],[28,0,17,17,'#f3f2d9'],[46,10,16,10,'#eaf1d6']])rect(c,xx,yy,w,h,col);
     c.restore();
   }
+  function titleCatPose(time, still = false) {
+    if (still) return { x: 525, y: 333, direction: -1, stride: 0 };
+    const clock = time + 7, phase = clock % 43;
+    if (phase > 25) return null;
+    const progress = phase / 25, direction = Math.floor(clock / 43) % 2 ? -1 : 1;
+    return { x: direction > 0 ? -30 + progress * 700 : 670 - progress * 700,
+      y: 329 + Math.sin(progress * Math.PI) * 6, direction, stride: Math.round(Math.sin(time * 9) * 2) };
+  }
+  function titleDuckPoses(time, still = false) {
+    const phase = (time + 6) % 36;
+    if (still || phase > 14) return [];
+    return Array.from({length:3}, (_,i) => ({x:-60 + phase / 14 * 760 - i * 15,
+      y:126 + i * 8 + Math.sin(phase * .35) * 14, flap:Math.sin(time * 12 - i * .8) > 0}));
+  }
+  function drawTitleAnimals(time) {
+    for (const duck of titleDuckPoses(time, reduced.matches)) {
+      c.save();c.translate(Math.round(duck.x),Math.round(duck.y));
+      rect(c,-7,-3,13,6,'#e4d8b5');rect(c,-8,-2,6,3,'#8e8170');
+      rect(c,3,-7,5,6,'#426c54');rect(c,4,-1,4,2,'#eee7c2');rect(c,8,-4,4,2,'#deb15c');
+      rect(c,6,-5,1,1,'#354d41');
+      if(duck.flap){rect(c,-4,-11,4,10,'#c5cbb7');rect(c,-6,-14,3,5,'#869984');}
+      else{rect(c,-3,0,4,8,'#aebba6');rect(c,-5,6,3,4,'#798d7c');}
+      c.restore();
+    }
+    const cat = titleCatPose(time, reduced.matches);
+    if (!cat) return;
+    c.save();c.translate(Math.round(cat.x),Math.round(cat.y));c.scale(cat.direction,1);
+    rect(c,-12,2,26,2,'#425f3d55');
+    rect(c,-14,-8,3,9,'#b77d47');rect(c,-17,-12,3,6,'#d49c59');rect(c,-17,-13,5,2,'#e4b373');
+    rect(c,-10,-9,19,9,'#ce9455');rect(c,-7,-11,12,3,'#e2b06d');
+    for(const x of [-7,-2,3])rect(c,x,-8,2,4,'#a67242');
+    rect(c,-8+cat.stride,-1,3,5,'#f2d5a2');rect(c,4-cat.stride,-1,3,5,'#f6dfb6');
+    rect(c,6,-14,9,9,'#e2aa6b');rect(c,6,-17,3,5,'#bd8551');rect(c,12,-17,3,5,'#bd8551');
+    rect(c,7,-15,1,2,'#e5b69e');rect(c,13,-15,1,2,'#e5b69e');
+    rect(c,8,-11,2,2,'#556445');rect(c,13,-11,2,2,'#556445');rect(c,11,-8,5,3,'#f7e1b8');rect(c,14,-8,2,1,'#b77c70');
+    c.restore();
+  }
   function paint(time) {
     c.clearRect(0,0,640,360);c.drawImage(base,0,0);
     // Clouds remain in the sky, below the foreground trees and above the hills.
@@ -86,6 +123,7 @@
       for(let i=0;i<3;i++){const x=(time*13+i*14+210)%760-60,y=121+i*5+Math.sin(time*.3)*6,flap=Math.sin(time*9+i)>0?-2:2;rect(c,x,y,2,1,'#4d7162');rect(c,x-3,y+flap,3,1,'#4d7162');rect(c,x+2,y+flap,3,1,'#4d7162');}
       for(let i=0;i<12;i++){const x=255+(i*37+time*2)%170,y=302+i%4*11+Math.sin(time+i)*3;rect(c,x,y,1,1,'#f0d99b');}
     }
+    drawTitleAnimals(time);
   }
   function tick(now) {
     if(!title.open||document.hidden){frame=0;last=0;return;}

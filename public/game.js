@@ -7,6 +7,7 @@ const crops={parsnip:{name:'Parsnip',days:2,price:10,sell:35,color:'#eedb9c'},ca
 const fresh=()=>({version:1,farmerName:'',day:1,minutes:360,money:250,energy:100,seeds:{parsnip:10,carrot:0,strawberry:0},produce:{parsnip:0,carrot:0,strawberry:0},selectedSeed:'parsnip',planted:0,harvested:0,earned:0,questReward:false,player:{x:489,y:422},tiles:Array.from({length:28},()=>({tilled:false,crop:null,age:0,watered:false}))});
 let state=fresh(), storageOK=true, hasFarm=false, playing=false;
 try{const raw=JSON.parse(localStorage.getItem('agromate-save'));if(raw&&raw.version===1&&raw.tiles?.length===28&&raw.seeds&&raw.produce&&raw.player&&Number.isFinite(raw.player.x)&&Number.isFinite(raw.money)){state={...fresh(),...raw};hasFarm=true;if(typeof state.farmerName!=='string')state.farmerName='';}}catch{storageOK=false;}
+let pointer=null;
 let tool=0,hover=null,target=null,actionFX=[],keys=new Set(),facing={x:0,y:1},walk=0,moving=false,idleTime=0,last=0,clockElapsed=0,dirty=false,toastTimer,view={w:960,h:600,x:0,y:0},audio=null,soundEnabled=false;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const tools=[['Hoe','Prepare a little patch of earth'],['Seeds','Plant something wonderful'],['Watering can','A little care goes a long way'],['Harvest','Gather the good things you grew'],['Basket','Sell your harvest at the shipping box']];
@@ -172,7 +173,7 @@ function tileCenter(i){return{x:garden.x+(i%7)*29+14,y:garden.y+Math.floor(i/7)*
 function useTile(i){const t=state.tiles[i],pos=tileCenter(i);if(tool===4){sell();return;}if(state.energy<2){toast('Time to rest. End the day to restore your energy.');return;}let message='';if(tool===0){if(t.crop){toast('Something is already growing here.');return;}if(t.tilled){toast('Ready for seeds! Select the seed packet (2).');return;}t.tilled=true;message='Fresh earth';}if(tool===1){if(!t.tilled){toast('Use the hoe (1) to prepare this soil first.');return;}if(t.crop){toast('This little patch already has a crop.');return;}if(state.seeds[state.selectedSeed]<=0){toast('Out of these seeds. Click the seed packet to choose another type, or visit the seed shop.');return;}t.crop=state.selectedSeed;t.age=0;state.seeds[t.crop]--;state.planted++;message='Planted';if(state.planted>=5&&!state.questReward){state.questReward=true;state.money+=50;toast('Small beginnings complete! A little gift: +50g.');}}if(tool===2){if(!t.tilled){toast('Prepare the soil with your hoe first.');return;}if(t.watered){toast('Already watered. Let nature do its thing.');return;}t.watered=true;message='Watered';}if(tool===3){if(!t.crop){toast('Nothing to gather here just yet.');return;}if(t.age<crops[t.crop].days){toast(crops[t.crop].name+': '+(crops[t.crop].days-t.age)+' watered day(s) until harvest.');return;}state.produce[t.crop]++;state.harvested++;message='+1 '+crops[t.crop].name;t.crop=null;t.age=0;t.watered=false;}state.energy-=2;state.minutes=Math.min(1190,state.minutes+5);effect(pos.x,pos.y-15,message);dirty=true;update();save();chime();}
 function sell(){let total=0,count=0;for(const id in state.produce){count+=state.produce[id];total+=state.produce[id]*crops[id].sell;state.produce[id]=0;}if(!count){toast('Your basket is empty. Harvest ripe crops with tool 4 first.');return;}state.money+=total;state.earned+=total;effect(659,294,'+'+total+'g');toast(`Sold ${count} crop${count===1?'':'s'} for ${total}g. A good day's work.`);update();save();chime();}
 function endDay(){const watered=state.tiles.filter(t=>t.crop&&t.watered).length,dry=state.tiles.filter(t=>t.crop&&!t.watered&&t.age<crops[t.crop].days).length;openModal(`<div class="eyebrow">A WELL-EARNED REST</div><h2>Call it a day?</h2><p>${watered?`${watered} watered crop${watered===1?' is':'s are'} ready to grow overnight.`:'A new morning brings a fresh start.'} ${dry?`${dry} unwatered crop${dry===1?' will':'s will'} wait for a little care.`:''}</p><p>Sleep restores all your energy. Your farm is saved automatically.</p><button class="primary-button" id="confirm-sleep">Sleep until morning ☾</button>`);$('confirm-sleep').onclick=()=>{for(const t of state.tiles){if(t.crop&&t.watered)t.age=Math.min(crops[t.crop].days,t.age+1);t.watered=false;}state.day++;state.energy=100;state.minutes=360;target=null;modal.close();update();save();toast('Good morning! A new day, a little more possibility.');};}
-function openModal(html){$('seed-picker').hidePopover();keys.clear();target=null;$('modal-content').innerHTML=html;if(!modal.open)modal.showModal();}
+function openModal(html){pointer=null;hover=null;$('seed-picker').hidePopover();keys.clear();target=null;$('modal-content').innerHTML=html;if(!modal.open)modal.showModal();}
 function shop(){openModal(`<div class="eyebrow">WILLOWBROOK SEED & SUPPLY</div><h2>Good things start small.</h2><p>Pick a seed to plant. Every growing day needs water.<br>Your purse: <strong>${state.money}g</strong></p>`+Object.entries(crops).map(([id,c])=>`<div class="shop-row"><div><strong>${c.name}</strong><small>${c.days} days · sells for ${c.sell}g · ${state.seeds[id]} in your bag</small><small><label><input type="radio" name="seed" value="${id}" ${state.selectedSeed===id?'checked':''}> Select for planting</label></small></div><button data-buy="${id}" ${state.money<c.price*5?'disabled':''}>5 seeds · ${c.price*5}g</button></div>`).join(''));document.querySelectorAll('[data-buy]').forEach(el=>el.onclick=()=>{let id=el.dataset.buy,price=crops[id].price*5;if(state.money<price)return;state.money-=price;state.seeds[id]+=5;state.selectedSeed=id;update();save();selectTool(1);shop();});document.querySelectorAll('[name="seed"]').forEach(el=>el.onchange=()=>{state.selectedSeed=el.value;selectTool(1);update();save();});}
 function help(){openModal(`<div class="eyebrow">WELCOME TO AGROMATE</div><h2>Make yourself at home.</h2><p>A little land, a handful of seeds, and all the time you need.</p><ol class="help-list"><li><strong>Explore</strong> with WASD, arrow keys, or tap a path.</li><li><strong>Till</strong> a garden square with the hoe (1).</li><li><strong>Plant</strong> a seed (2). Click the seed packet to open the seed selector, choose a crop, then water it (3).</li><li><strong>End the day</strong> to grow watered crops.</li><li><strong>Harvest</strong> ripe crops (4), then sell with the basket (5) or click the wooden shipping box.</li></ol><p class="welcome-note">Click a garden tile to use your selected tool. Space uses it in front of you. Start with 10 parsnip seeds; they grow in 2 watered days. Progress saves on this device.</p><button class="primary-button" id="start-farming">Back to the farm →</button>`);$('start-farming').onclick=()=>modal.close();}
 $('contact').onclick = () => {
@@ -184,16 +185,67 @@ document.querySelector('.dialog-close').onclick=()=>modal.close();modal.addEvent
 const blocks=[{x:224,y:100,w:175,h:145},{x:700,y:296,w:173,h:123},{x:630,y:296,w:55,h:43}];
 function canWalk(x,y){return x>70&&x<895&&y>82&&y<560&&!blocks.some(r=>x>r.x-5&&x<r.x+r.w+5&&y>r.y&&y<r.y+r.h+6);}
 function worldPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*view.w+view.x,y:(e.clientY-r.top)/r.height*view.h+view.y};}
-canvas.addEventListener('pointermove',e=>{const p=worldPoint(e);hover=tileAt(p.x,p.y);});canvas.addEventListener('pointerleave',()=>hover=null);
-canvas.addEventListener('pointerdown',e=>{if(!playing)return;e.preventDefault();canvas.focus({preventScroll:true});const p=worldPoint(e),i=tileAt(p.x,p.y);if(i!==null){useTile(i);return;}if(p.x>625&&p.x<690&&p.y>290&&p.y<345){sell();return;}if(p.x>289&&p.x<335&&p.y>188&&p.y<250){endDay();return;}if(canWalk(p.x,p.y))target=p;else toast('Take the path around the farmhouse and pond.');});
-window.addEventListener('keydown',e=>{if(!playing||modal.open)return;let k=e.key.toLowerCase();if(e.target.closest?.('button, input, select, textarea, a, #seed-picker')&&[' ','enter','arrowup','arrowdown','arrowleft','arrowright'].includes(k))return;if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)){e.preventDefault();keys.add(k);target=null;}if('12345'.includes(k)&&k.length===1&&!e.repeat){const wasOpen=$('seed-picker').matches(':popover-open');selectTool(Number(k)-1);if(k==='2'&&!wasOpen)$('seed-picker').showPopover();}if(k===' '&&!e.repeat){if(tool===4)sell();else{let i=tileAt(state.player.x+facing.x*24,state.player.y+facing.y*24);if(i===null)i=tileAt(state.player.x,state.player.y);if(i!==null)useTile(i);else toast('Use your tool on the garden squares. Click a square to reach it.');}}});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();save();}});window.addEventListener('pagehide',save);
+const shell = document.querySelector('.game-shell');
+shell.addEventListener('pointermove', event => {
+  if ((event.target === canvas || event.target === $('kris-interact')) && event.pointerType !== 'touch') {
+    pointer = { clientX: event.clientX, clientY: event.clientY };
+  } else pointer = null;
+  const point = pointer ? worldPoint(pointer) : null;
+  hover = point ? tileAt(point.x, point.y) : null;
+});
+shell.addEventListener('pointerleave', () => {pointer = null;hover = null;});
+function greetKris() {
+  if (!playing || modal.open || !window.AgromateSeagull.speak(reduced)) return;
+  // Clear before repeating the line so assistive technology can announce each greeting.
+  $('gull-speech').textContent = '';
+  $('gull-speech').textContent = 'hey hey';
+}
+$('kris-interact').addEventListener('click', event => {
+  greetKris();
+  if (event.detail > 0) canvas.focus({preventScroll:true});
+});
+function updateActorOverlays() {
+  const button = $('kris-interact'), plate = $('actor-nameplate'), speech = $('gull-speech');
+  const pose = window.AgromateSeagull.getPose(reduced);
+  const active = playing && !modal.open && !document.hidden;
+  const width = canvas.clientWidth, height = canvas.clientHeight;
+  const toScreen = (x, y) => ({x: (x - view.x) / view.w * width, y: (y - view.y) / view.h * height});
+  const gull = pose ? toScreen(pose.x, pose.screenY) : null;
+  const visible = active && gull && gull.x >= 20 && gull.x <= width - 20 && gull.y >= 30 && gull.y <= height - 8;
+  button.hidden = !visible;
+  if (visible) {
+    button.style.left = gull.x + 'px';button.style.top = (gull.y + 8) + 'px';
+  } else if (document.activeElement === button) canvas.focus({preventScroll:true});
+  const point = active && pointer ? worldPoint(pointer) : null;
+  const overGull = visible && ((point && window.AgromateSeagull.hitTest(point.x, point.y, reduced)) || document.activeElement === button);
+  const overFarmer = point && Math.abs(point.x - state.player.x) <= 14 && point.y >= state.player.y - 48 && point.y <= state.player.y + 4;
+  let label = '', anchor = null;
+  if (overGull) {label = 'Kris';anchor = toScreen(pose.x, pose.screenY - 28);}
+  else if (overFarmer) {label = state.farmerName;anchor = toScreen(state.player.x, state.player.y - 51);}
+  plate.hidden = !label;
+  if (label) {
+    if (plate.textContent !== label) plate.textContent = label;
+    plate.style.left = Math.max(82, Math.min(width - 82, anchor.x)) + 'px';
+    plate.style.top = Math.max(22, anchor.y) + 'px';
+    canvas.setAttribute('aria-describedby', 'actor-nameplate');
+  } else canvas.removeAttribute('aria-describedby');
+  speech.hidden = !(visible && pose.speaking);
+  if (!speech.hidden) {
+    speech.style.left = Math.max(45, Math.min(width - 45, gull.x)) + 'px';
+    speech.style.top = Math.max(24, gull.y - (overGull ? 55 : 29)) + 'px';
+  }
+  canvas.style.cursor = overGull ? 'pointer' : 'crosshair';
+}
+
+canvas.addEventListener('pointerdown',e=>{if(!playing)return;e.preventDefault();canvas.focus({preventScroll:true});const p=worldPoint(e);if(window.AgromateSeagull.hitTest(p.x,p.y,reduced)){greetKris();return;}const i=tileAt(p.x,p.y);if(i!==null){useTile(i);return;}if(p.x>625&&p.x<690&&p.y>290&&p.y<345){sell();return;}if(p.x>289&&p.x<335&&p.y>188&&p.y<250){endDay();return;}if(canWalk(p.x,p.y))target=p;else toast('Take the path around the farmhouse and pond.');});
+window.addEventListener('keydown',e=>{if(!playing||modal.open)return;let k=e.key.toLowerCase();if(e.target.closest?.('button, input, select, textarea, a, #seed-picker')&&[' ','enter','arrowup','arrowdown','arrowleft','arrowright'].includes(k))return;if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)){e.preventDefault();keys.add(k);target=null;}if('12345'.includes(k)&&k.length===1&&!e.repeat){const wasOpen=$('seed-picker').matches(':popover-open');selectTool(Number(k)-1);if(k==='2'&&!wasOpen)$('seed-picker').showPopover();}if(k===' '&&!e.repeat){if(tool===4)sell();else{let i=tileAt(state.player.x+facing.x*24,state.player.y+facing.y*24);if(i===null)i=tileAt(state.player.x,state.player.y);if(i!==null)useTile(i);else toast('Use your tool on the garden squares. Click a square to reach it.');}}});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();pointer=null;hover=null;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();save();}});window.addEventListener('pagehide',save);
 document.querySelectorAll('[data-dir]').forEach(el=>{const key={up:'w',left:'a',down:'s',right:'d'}[el.dataset.dir];el.addEventListener('pointerdown',e=>{e.preventDefault();target=null;keys.add(key);el.setPointerCapture(e.pointerId);});for(const ev of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(ev,()=>keys.delete(key));});
 function resize(){const r=canvas.getBoundingClientRect(),ratio=r.width/r.height;view.w=Math.min(960,600*ratio);view.h=Math.min(600,960/ratio);canvas.width=Math.round(view.w);canvas.height=Math.round(view.h);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(resize).observe(canvas);
 function showTitle() {
   if(playing)save();
   playing = false;
-  keys.clear(); target = null;
+  keys.clear(); target = null;pointer=null;
   $('seed-picker').hidePopover();
   if (modal.open) modal.close();
   $('farmer-name').value = state.farmerName;
@@ -226,6 +278,7 @@ document.querySelector('.brand').addEventListener('click', event => {event.preve
 function chime(){if(!soundEnabled||!audio)return;const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(660,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(880,audio.currentTime+.1);gain.gain.setValueAtTime(.025,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.3);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+.3);}
 let ambientNodes=[];$('sound').onclick=async()=>{try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();soundEnabled=!soundEnabled;if(soundEnabled){for(const freq of [130.81,196,261.63]){const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.value=freq;gain.gain.value=.008;osc.connect(gain).connect(audio.destination);osc.start();ambientNodes.push(osc);}chime();}else{ambientNodes.forEach(n=>n.stop());ambientNodes=[];}$('sound').classList.toggle('sound-on',soundEnabled);$('sound').setAttribute('aria-label',soundEnabled?'Disable ambient sound':'Enable ambient sound');$('sound').setAttribute('aria-pressed',String(soundEnabled));}catch{toast('Sound is unavailable in this browser.');}};
 function draw(now){const dt=Math.min((now-last)/1000||0,.05);last=now;moving=false;if(!reduced&&playing&&!modal.open&&!document.hidden){window.AgromateWildlife.update(dt);window.AgromateCompanions.update(dt);}if(playing&&!modal.open&&!document.hidden){let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dy=Number(keys.has('s')||keys.has('arrowdown'))-Number(keys.has('w')||keys.has('arrowup'));if(target&&!dx&&!dy){dx=target.x-state.player.x;dy=target.y-state.player.y;if(Math.hypot(dx,dy)<4){target=null;dx=dy=0;}}if(dx||dy){const len=Math.hypot(dx,dy);dx/=len;dy/=len;let nx=state.player.x+dx*100*dt,ny=state.player.y+dy*100*dt;const oldX=state.player.x,oldY=state.player.y;if(canWalk(nx,state.player.y))state.player.x=nx;if(canWalk(state.player.x,ny))state.player.y=ny;if(target&&oldX===state.player.x&&oldY===state.player.y)target=null;facing={x:Math.abs(dx)>Math.abs(dy)?Math.sign(dx):0,y:Math.abs(dy)>=Math.abs(dx)?Math.sign(dy):0};moving=oldX!==state.player.x||oldY!==state.player.y;if(moving){walk+=dt*12;dirty=true;}else walk=0;}else walk=0;clockElapsed+=dt;if(clockElapsed>6){clockElapsed=0;if(state.minutes<1190)state.minutes+=10;update();if(dirty)save();}}
+if(playing&&!modal.open&&!document.hidden)window.AgromateSeagull.update(dt,reduced);
 updateFarmerIdle(dt,playing&&!modal.open&&!document.hidden);
 view.x=Math.max(0,Math.min(960-view.w,state.player.x-view.w/2));view.y=Math.max(0,Math.min(600-view.h,state.player.y-view.h*.65));ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();ctx.translate(-Math.round(view.x),-Math.round(view.y));ctx.drawImage(base,0,0);window.AgromateWildlife.drawWater(ctx,reduced);
 for(let i=0;i<state.tiles.length;i++){const t=state.tiles[i],p=tileCenter(i),x=p.x-14,y=p.y-14;if(t.tilled){rect(ctx,x+1,y+1,27,27,t.watered?'#786a49':'#9a794c');rect(ctx,x+2,y+2,25,2,t.watered?'#655e44':'#866940');for(let row=0;row<3;row++)rect(ctx,x+4,y+8+row*7,20,1,t.watered?'#665d42':'#82643e');if(t.watered){rect(ctx,x+5,y+4,2,2,'#97a294');rect(ctx,x+21,y+17,2,2,'#97a294');}}crop(ctx,p.x,p.y+3,t);if(t.crop&&t.age>=crops[t.crop].days&&!reduced){const phase=(now/500+i)%4;rect(ctx,p.x+9,p.y-18+Math.sin(phase)*2,2,2,'#f6e3a4');}}
@@ -235,12 +288,15 @@ rect(ctx,613,346,3,33,'#a58a53');rect(ctx,600,346,29,4,'#9b8050');poly(ctx,[[605
 // wandering hens
 for(let i=0;i<3;i++){let x=260+i*26+(reduced?0:Math.sin(now/4500+i*2)*9),y=367+i%2*15;ellipse(ctx,x,y+4,7,3,'#5a703944');rect(ctx,x-5,y-5,11,9,i===1?'#cfa976':'#e9e1b5');rect(ctx,x+3,y-9,6,8,i===1?'#dfbd8c':'#f4edc6');rect(ctx,x+4,y-11,3,3,'#c97d58');rect(ctx,x+8,y-5,3,2,'#d7a653');rect(ctx,x+6,y-7,1,1,'#50533d');rect(ctx,x-3,y+4,2,3,'#c6a05d');rect(ctx,x+2,y+4,2,3,'#c6a05d');}
 window.AgromateCompanions.drawGround(ctx,state.player.y,true,reduced);
+window.AgromateSeagull.drawGround(ctx,state.player.y,true,reduced);
 farmer(ctx,state.player.x,state.player.y,idleTime);
 window.AgromateCompanions.drawGround(ctx,state.player.y,false,reduced);
+window.AgromateSeagull.drawGround(ctx,state.player.y,false,reduced);
 if(target){ctx.strokeStyle='#f3e6ad88';ctx.lineWidth=1;ctx.strokeRect(target.x-4,target.y-2,8,4);}
 if(!reduced){for(let i=0;i<7;i++){let x=180+(i*107+now*.009)%660,y=145+(i*59)%330+Math.sin(now/1700+i)*16;rect(ctx,x,y,2,2,'#f2db9477');}for(let i=0;i<5;i++){let x=741+i*22+Math.sin(now/1800+i)*5,y=340+i%3*22;rect(ctx,x,y,11,1,'#b0cbb480');}}
 for(const f of actionFX){f.life-=dt;f.y-=dt*14;ctx.globalAlpha=Math.min(1,f.life*2);ctx.font='9px monospace';ctx.textAlign='center';ctx.fillStyle='#4b5c3a';ctx.fillText(f.text,f.x+1,f.y+1);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);}ctx.globalAlpha=1;actionFX=actionFX.filter(f=>f.life>0);
 if(!reduced)window.AgromateWildlife.drawSky(ctx);
-if(state.minutes>=1020){rect(ctx,0,0,960,600,`rgba(67,58,94,${Math.min(.22,(state.minutes-1020)/900)})`);}ctx.restore();requestAnimationFrame(draw);}
+window.AgromateSeagull.drawSky(ctx,reduced);
+if(state.minutes>=1020){rect(ctx,0,0,960,600,`rgba(67,58,94,${Math.min(.22,(state.minutes-1020)/900)})`);}ctx.restore();updateActorOverlays();requestAnimationFrame(draw);}
 update();resize();requestAnimationFrame(draw);showTitle();
 })();
