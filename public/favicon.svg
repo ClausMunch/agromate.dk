@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <title>Agromate sprout</title>
+  <path fill="#304b37" d="M4 0h24v2h2v2h2v24h-2v2h-2v2H4v-2H2v-2H0V4h2V2h2z"/>
+  <path fill="#78964c" d="M5 3h22v2h2v22h-2v2H5v-2H3V5h2z"/>
+  <path fill="#91aa5d" d="M5 5h22v2H7v12H5z"/>
+  <path fill="#c7ac71" d="M6 21h20v6H6z"/>
+  <path fill="#947244" d="M8 23h16v4H8z"/>
+  <path fill="#6c573b" d="M10 25h4v2h-4zm9-2h4v2h-4z"/>
+  <path fill="#e7d29a" d="M13 18h7v6h-2v3h-3v-3h-2z"/>
+  <path fill="#fff0bd" d="M13 18h3v6h-2v-2h-1z"/>
+  <path fill="#354f37" d="M15 10h3v10h-3z"/>
+  <path fill="#cee09a" d="M7 8h6v2h3v6h-5v-2H9v-2H7z"/>
+  <path fill="#a7c67a" d="M18 8h3V6h5v5h-2v3h-6z"/>
+  <path fill="#eff0bb" d="M8 8h5v2h-3v2H8zm13-2h5v2h-5z"/>
+  <path fill="#7b9b54" d="M11 12h3v3h-3zm7-1h4v2h-4z"/>
+</svg>
