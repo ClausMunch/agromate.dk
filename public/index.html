@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#263e32"><meta name="description" content="A little farm, a slower life. Grow your own corner of the world in Agromate, a cozy pixel-art farming game."><title>Agromate — A little farm, a slower life</title><link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="stylesheet" href="style.css"></head>
 <body>
-<header class="topbar"><a class="brand" href="./" aria-label="Agromate home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V12M16 20C5 20 4 14 4 10c9-1 12 4 12 10Zm0-7C16 5 22 3 28 4c0 7-4 10-12 9Z" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>agromate<span class="brand-dot">.</span></a><span class="tagline">A little farm, a slower life.</span><div class="header-actions"><span class="saved" id="saved">● Saved on this device</span><button class="icon-button" id="sound" aria-label="Enable ambient sound" title="Toggle ambient sound">♫</button><button class="icon-button" id="help" aria-label="How to play" title="How to play">?</button></div></header>
-<main><div class="farm-heading"><div><div class="eyebrow">YOUR OWN LITTLE CORNER OF THE WORLD</div><h1>Willowbrook Farm <span class="heading-leaf">❧</span></h1></div><button class="outline-button" id="journal">Farm journal <span>↗</span></button></div>
+<header class="topbar"><a class="brand" href="./" aria-label="Open Agromate title screen"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V12M16 20C5 20 4 14 4 10c9-1 12 4 12 10Zm0-7C16 5 22 3 28 4c0 7-4 10-12 9Z" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>agromate<span class="brand-dot">.</span></a><span class="tagline">A little farm, a slower life.</span><div class="header-actions"><span class="saved" id="saved">● Saved on this device</span><button class="icon-button" id="sound" aria-label="Enable ambient sound" title="Toggle ambient sound">♫</button><button class="icon-button" id="help" aria-label="How to play" title="How to play">?</button></div></header>
+<main><div class="farm-heading"><div><div class="eyebrow" id="welcome-label">YOUR OWN LITTLE CORNER OF THE WORLD</div><h1>Willowbrook Farm <span class="heading-leaf">❧</span></h1></div><button class="outline-button" id="journal">Farm journal <span>↗</span></button></div>
 <section class="game-shell" aria-label="Agromate farming game">
 <canvas id="game" width="960" height="600" tabindex="0" aria-label="Your farm. Move with WASD or arrow keys. Select a tool with 1 to 5, click a garden tile or press Space to use it."></canvas>
 <div class="day-card"><div class="season"><span class="sun-icon">☀</span><div><strong>Spring <span id="day">1</span></strong><span id="weekday">Monday, Year 1</span></div></div><div class="time-row"><span id="time">6:00 am</span><span>A little sunshine ahead</span></div></div>
@@ -13,5 +13,17 @@
 <div class="tool-dock"><div class="seed-picker" id="seed-picker" role="group" aria-label="Choose seeds to sow" popover><span class="seed-picker-label">CHOOSE SEEDS TO SOW</span><div id="seed-options"></div></div><div class="toolbar" id="toolbar" role="toolbar" aria-label="Farming tools"></div><span class="tool-caption" id="tool-caption">HOE <span>·</span> Prepare a little patch of earth</span></div>
 <div class="mobile-move" aria-label="Movement controls"><button data-dir="up" aria-label="Move up">↑</button><button data-dir="left" aria-label="Move left">←</button><button data-dir="down" aria-label="Move down">↓</button><button data-dir="right" aria-label="Move right">→</button></div>
 </section><footer class="game-footer"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move <i></i><kbd>1</kbd>–<kbd>5</kbd> select tool <i></i><span class="mouse-icon">↖</span> click to use <span class="desktop-hint">or <kbd>SPACE</kbd></span></span><span class="footer-note"><span>✧</span> No rush. You're growing at your own pace.</span></footer><div class="site-footer"><button class="contact-link" id="contact" type="button" aria-haspopup="dialog">Contact</button><div class="build-version" id="build-version" aria-label="Running game version">Version information unavailable</div></div></main>
-<dialog id="modal"><div id="modal-content"></div><button class="dialog-close" aria-label="Close dialog">×</button></dialog><script src="version.js"></script><script src="wildlife.js"></script><script src="game.js"></script>
+<dialog id="title-screen" class="title-screen" aria-labelledby="title-heading" aria-describedby="title-description">
+<form id="start-form">
+<img class="title-emblem" src="favicon.svg" width="56" height="56" alt="">
+<div class="eyebrow">A LITTLE FARM, A SLOWER LIFE</div>
+<h2 id="title-heading">agromate<span>.</span></h2>
+<p id="title-description">A patch of earth. A handful of seeds.<br>A little place to call your own.</p>
+<label class="name-label" for="farmer-name">What should we call you?</label>
+<input id="farmer-name" name="farmerName" type="text" autocomplete="nickname" placeholder="Your farmer's name" maxlength="24" required>
+<button class="primary-button play-button" id="play" type="submit">Play →</button>
+<small class="title-save-note">Your farm is saved on this device.</small>
+</form>
+</dialog>
+<dialog id="modal"><div id="modal-content"></div><button class="dialog-close" aria-label="Close dialog">×</button></dialog><script src="version.js"></script><script src="wildlife.js"></script><script src="companions.js"></script><script src="game.js"></script>
 </body></html>
