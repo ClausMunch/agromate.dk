@@ -1,13 +1,24 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const version = (await readFile(path.join(root, 'VERSION'), 'utf8')).trim();
 if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version)) throw new Error('Invalid VERSION');
-const assets = ['public/index.html', 'public/style.css', 'public/game.js', 'public/wildlife.js', 'public/companions.js', 'public/favicon.svg', 'public/title-scene.js', 'public/title-logo.svg', 'public/seagull.js'];
+async function publicFiles(directory = 'public') {
+  const files = [];
+  for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
+    if (entry.name.startsWith('.')) continue;
+    const name = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) files.push(...await publicFiles(name));
+    else if (entry.isFile() && name !== 'public/version.js') files.push(name);
+  }
+  return files.sort();
+}
+// Include every public resource, including share images and discovery files.
+const assets = await publicFiles();
 const hash = createHash('sha256').update(version);
 for (const asset of assets) {
   hash.update(asset).update(await readFile(path.join(root, asset)));

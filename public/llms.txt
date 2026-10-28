@@ -1,0 +1,26 @@
+# Agromate
+
+> Agromate is a free, single-player pixel-art farming game played in a web browser at https://agromate.dk/. Its setting is Willowbrook Farm. No download, payment, or account is required.
+
+## Official pages
+
+- [Play Agromate](https://agromate.dk/): The game and its title screen.
+- [About Agromate and how to play](https://agromate.dk/about.html): Human-readable game description, controls, crop growing times, local-save behavior, and common questions.
+- [How to play](https://agromate.dk/about.html#how-to-play): A step-by-step guide to the farming loop.
+
+## Game facts
+
+- The player tills soil, plants seeds, waters crops, advances days, harvests, and sells produce to buy more seeds.
+- Parsnips need 2 watered days, carrots 3, and strawberries 4. Unwatered crops do not advance overnight. Ending the day restores energy.
+- Move with WASD or arrow keys, click a path, or use on-screen touch controls. Select tools with 1–5. Click or tap a plot to use a tool; Space uses the selected tool in front of the farmer.
+- Select the seed packet or press 2 to choose which crop to sow.
+- The farm has animated ducks, chickens, a cat that catches mice, and a visiting seagull named Kris. Clicking or tapping Kris displays “hey hey.”
+- The title screen supports farmer names and continuing an existing save. Its landscape includes occasional duck flyovers and a strolling cat.
+- Play requires JavaScript and a modern browser. Desktop, tablet, and phone controls are supported.
+- Progress and the farmer name are saved in local storage on the current browser and device. There is no account-based or cross-device synchronization. Clearing browser storage may delete a save.
+- The game is single-player. Multiplayer is not available.
+- Reduced-motion preferences are respected; ambient sound is optional.
+
+## Scope
+
+This is a factual summary of the public game, not a crawler policy. Refer to the official pages for current details. Contact is available from the game footer.

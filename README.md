@@ -23,3 +23,17 @@ The fullscreen title features an original pixel-art landscape, drifting clouds, 
 Kris the seagull periodically flies in, lands beside the garden, and takes off again. Hover over Kris to see his name, or click/tap him to get “hey hey.” The seagull also supports keyboard focus and activation. Hovering over your farmer shows the name from your profile. Seagull visits pause with gameplay; reduced-motion mode keeps Kris resting on the farm.
 
 The title landscape also hosts occasional duck flyovers and a tabby strolling across the foreground. With reduced motion enabled, flights are omitted and the cat rests in place.
+
+## Sharing and discovery
+
+The canonical public URL is **https://agromate.dk/**. Both game and About pages include static titles, descriptions, canonical links, Open Graph metadata, X large-image cards, and JSON-LD. The share image is `public/agromate-social-v1.png` (1200×630 PNG). Metadata is in the original HTML, so social crawlers do not need to run the game.
+
+`public/about.html` provides human-readable game facts, controls, crop times, and save limitations. `public/robots.txt` permits crawling and points to `public/sitemap.xml`. `public/llms.txt` is an optional factual summary for tools that choose to read it; it is not a crawler policy or a guarantee of AI recommendations. The game description and structured data contain no invented ratings or reviews. The contact address remains obfuscated.
+
+Run `python3 scripts/check-seo.py` to check raw metadata, linked files, structured data, the image, crawler access, and discovery files. Run `node scripts/stamp-version.mjs` before publishing; the fingerprint now covers all public files except its own generated version script.
+
+The share-image source is `scripts/social-card.html`. To regenerate it, serve `public/` locally and run Chrome with a debugging port (9238 by default), then run `node scripts/render-social-card.mjs http://127.0.0.1:8000/`. Set `CHROME_DEBUG_URL` if the browser uses another port. The renderer uses the original title artwork and freezes the scene for a repeatable card. If changing the share image later, give it a new versioned filename and update both pages' social metadata and structured image URL so cached social previews can refresh.
+
+Deploy all of `public/`, including the PNG, About page, robots.txt, sitemap.xml, and llms.txt. The host must return the real files with correct MIME types, without login or crawler challenges. Then submit `https://agromate.dk/sitemap.xml` through the owner's Google Search Console and Bing Webmaster Tools accounts. No account ownership verification or sitemap submission is included here. Search ranking, indexing, and AI inclusion are determined by the services, not guaranteed by metadata.
+
+Implementation follows [Open Graph](https://ogp.me/), [Schema.org VideoGame](https://schema.org/VideoGame), and [Google's guidance on AI search features](https://developers.google.com/search/docs/appearance/ai-features), which recommends normal crawlable SEO foundations rather than special AI markup.
