@@ -7,7 +7,7 @@ import path from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const version = (await readFile(path.join(root, 'VERSION'), 'utf8')).trim();
 if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version)) throw new Error('Invalid VERSION');
-const assets = ['public/index.html', 'public/style.css', 'public/game.js', 'public/wildlife.js', 'public/companions.js', 'public/favicon.svg'];
+const assets = ['public/index.html', 'public/style.css', 'public/game.js', 'public/wildlife.js', 'public/companions.js', 'public/favicon.svg', 'public/title-scene.js', 'public/title-logo.svg'];
 const hash = createHash('sha256').update(version);
 for (const asset of assets) {
   hash.update(asset).update(await readFile(path.join(root, asset)));

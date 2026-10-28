@@ -186,11 +186,12 @@ function canWalk(x,y){return x>70&&x<895&&y>82&&y<560&&!blocks.some(r=>x>r.x-5&&
 function worldPoint(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*view.w+view.x,y:(e.clientY-r.top)/r.height*view.h+view.y};}
 canvas.addEventListener('pointermove',e=>{const p=worldPoint(e);hover=tileAt(p.x,p.y);});canvas.addEventListener('pointerleave',()=>hover=null);
 canvas.addEventListener('pointerdown',e=>{if(!playing)return;e.preventDefault();canvas.focus({preventScroll:true});const p=worldPoint(e),i=tileAt(p.x,p.y);if(i!==null){useTile(i);return;}if(p.x>625&&p.x<690&&p.y>290&&p.y<345){sell();return;}if(p.x>289&&p.x<335&&p.y>188&&p.y<250){endDay();return;}if(canWalk(p.x,p.y))target=p;else toast('Take the path around the farmhouse and pond.');});
-window.addEventListener('keydown',e=>{if(!playing||modal.open)return;let k=e.key.toLowerCase();if(e.target.closest?.('#seed-picker')&&[' ','enter','arrowup','arrowdown','arrowleft','arrowright'].includes(k))return;if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)){e.preventDefault();keys.add(k);target=null;}if('12345'.includes(k)&&k.length===1&&!e.repeat){const wasOpen=$('seed-picker').matches(':popover-open');selectTool(Number(k)-1);if(k==='2'&&!wasOpen)$('seed-picker').showPopover();}if(k===' '&&!e.repeat){if(tool===4)sell();else{let i=tileAt(state.player.x+facing.x*24,state.player.y+facing.y*24);if(i===null)i=tileAt(state.player.x,state.player.y);if(i!==null)useTile(i);else toast('Use your tool on the garden squares. Click a square to reach it.');}}});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();save();}});window.addEventListener('pagehide',save);
+window.addEventListener('keydown',e=>{if(!playing||modal.open)return;let k=e.key.toLowerCase();if(e.target.closest?.('button, input, select, textarea, a, #seed-picker')&&[' ','enter','arrowup','arrowdown','arrowleft','arrowright'].includes(k))return;if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)){e.preventDefault();keys.add(k);target=null;}if('12345'.includes(k)&&k.length===1&&!e.repeat){const wasOpen=$('seed-picker').matches(':popover-open');selectTool(Number(k)-1);if(k==='2'&&!wasOpen)$('seed-picker').showPopover();}if(k===' '&&!e.repeat){if(tool===4)sell();else{let i=tileAt(state.player.x+facing.x*24,state.player.y+facing.y*24);if(i===null)i=tileAt(state.player.x,state.player.y);if(i!==null)useTile(i);else toast('Use your tool on the garden squares. Click a square to reach it.');}}});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();save();}});window.addEventListener('pagehide',save);
 document.querySelectorAll('[data-dir]').forEach(el=>{const key={up:'w',left:'a',down:'s',right:'d'}[el.dataset.dir];el.addEventListener('pointerdown',e=>{e.preventDefault();target=null;keys.add(key);el.setPointerCapture(e.pointerId);});for(const ev of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(ev,()=>keys.delete(key));});
 function resize(){const r=canvas.getBoundingClientRect(),ratio=r.width/r.height;view.w=Math.min(960,600*ratio);view.h=Math.min(600,960/ratio);canvas.width=Math.round(view.w);canvas.height=Math.round(view.h);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(resize).observe(canvas);
 function showTitle() {
+  if(playing)save();
   playing = false;
   keys.clear(); target = null;
   $('seed-picker').hidePopover();
@@ -198,7 +199,8 @@ function showTitle() {
   $('farmer-name').value = state.farmerName;
   $('farmer-name').setCustomValidity('');
   $('play').textContent = hasFarm ? 'Continue your farm →' : 'Play →';
-  $('title-description').textContent = hasFarm ? 'Welcome back. Your little corner of Willowbrook is right where you left it.' : 'A patch of earth. A handful of seeds. A little place to call your own.';
+  $('title-description').textContent = hasFarm ? 'Welcome back. Your farm is waiting.' : 'Your own little corner of the world.';
+  $('title-version').textContent = $('build-version').textContent;
   if (!$('title-screen').open) $('title-screen').showModal();
 }
 $('title-screen').addEventListener('cancel', event => event.preventDefault());
@@ -219,6 +221,7 @@ $('start-form').addEventListener('submit', event => {
   canvas.focus({preventScroll:true});
   toast(state.planted ? `Welcome back, ${name}. Your farm missed you.` : `Welcome home, ${name}. Select the hoe and click a garden square to begin.`);
 });
+$('return-title').addEventListener('click',showTitle);
 document.querySelector('.brand').addEventListener('click', event => {event.preventDefault();showTitle();});
 function chime(){if(!soundEnabled||!audio)return;const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(660,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(880,audio.currentTime+.1);gain.gain.setValueAtTime(.025,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.3);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+.3);}
 let ambientNodes=[];$('sound').onclick=async()=>{try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();soundEnabled=!soundEnabled;if(soundEnabled){for(const freq of [130.81,196,261.63]){const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.value=freq;gain.gain.value=.008;osc.connect(gain).connect(audio.destination);osc.start();ambientNodes.push(osc);}chime();}else{ambientNodes.forEach(n=>n.stop());ambientNodes=[];}$('sound').classList.toggle('sound-on',soundEnabled);$('sound').setAttribute('aria-label',soundEnabled?'Disable ambient sound':'Enable ambient sound');$('sound').setAttribute('aria-pressed',String(soundEnabled));}catch{toast('Sound is unavailable in this browser.');}};
