@@ -15,3 +15,5 @@ The version label below the game shows the release number, a content fingerprint
 Ambient ducks fly in, land on the pond, paddle with ripples, and take off again. Small flocks occasionally cross the farm overhead. Wildlife pauses while dialogs are open or the tab is hidden; reduced-motion mode keeps the ducks resting on the pond and skips flights.
 
 Start at the title screen, enter your farmer’s name, and press Play. Returning players can continue their saved farm and change their name. Click the Agromate logo to return to the title screen without resetting progress. Your farmer breathes and blinks while idle. A tabby cat strolls around the clearing, stalks and pounces on mice, then grooms before continuing its patrol. Title screens and dialogs pause play; reduced-motion mode keeps the cat still.
+
+The farmer has front, back, left, and right views matching movement. After a short pause, the farmer turns toward the camera and starts breathing and blinking. The turn also updates the direction used by Space interactions. Reduced-motion mode skips the animated turn and breathing.
