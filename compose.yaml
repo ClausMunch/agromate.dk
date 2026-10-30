@@ -1,0 +1,43 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    user: "${AGROMATE_UID:-1000}:${AGROMATE_GID:-1000}"
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ${AGROMATE_SCRATCH:-/home/munch/.hermes/cache/scratch}:/artifacts
+    environment:
+      COMPOSER_HOME: /artifacts/composer
+      TMPDIR: /artifacts
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_KEY: base64:WmFhWmFhWmFhWmFhWmFhWmFhWmFhWmFhWmFhWmFhWmE=
+      APP_URL: http://127.0.0.1:8088
+      SESSION_SECURE_COOKIE: "false"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_DATABASE: agromate_test
+      DB_USERNAME: agromate_test
+      DB_PASSWORD: isolated-local-only
+    ports:
+      - "127.0.0.1:8088:8000"
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    depends_on:
+      mysql:
+        condition: service_healthy
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: agromate_test
+      MYSQL_USER: agromate_test
+      MYSQL_PASSWORD: isolated-local-only
+      MYSQL_ROOT_PASSWORD: isolated-local-root-only
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 2s
+      timeout: 2s
+      retries: 60

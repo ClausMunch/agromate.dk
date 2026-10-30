@@ -1,0 +1,17 @@
+name: agromate
+type: laravel
+docroot: public
+php_version: "8.4"
+webserver_type: nginx-fpm
+xdebug_enabled: false
+additional_hostnames: []
+additional_fqdns: []
+database:
+    type: mysql
+    version: "8.4"
+use_dns_when_possible: true
+timezone: Europe/Copenhagen
+composer_version: "2"
+web_environment: []
+nodejs_version: "24"
+corepack_enable: false
