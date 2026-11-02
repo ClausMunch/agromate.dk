@@ -23,4 +23,4 @@ Screenshots at `/tmp/agromate-life-{farm,decor}-{1440,390}.png` and `/tmp/agroma
 
 ## Release state
 
-`VERSION` is 0.7.0; the generated public badge identifies build `5fc4b786` from source commit `8e685a3` with uncommitted changes. README, About and the factual game summary describe the activities. Production deployment and real Google consent were not exercised. Prices/rewards are initial balance defaults; the progression simulation covers one representative strategy, not every play style.
+`VERSION` is 0.7.0; the generated public badge identifies build `5fc4b786`. After verification, the release was committed as `a31a9f1` and the badge was refreshed to reference that committed source without the modified marker. README, About and the factual game summary describe the activities. Production deployment and real Google consent were not exercised. Prices/rewards are initial balance defaults; the progression simulation covers one representative strategy, not every play style.
