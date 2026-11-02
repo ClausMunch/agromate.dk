@@ -84,9 +84,10 @@ class SaveController
             'state.tiles.*.watered' => ['required', $boolean],
             'state.tiles.*.crop' => ['present', 'nullable', 'in:parsnip,carrot,strawberry'],
             'state.tiles.*.age' => ['required', $integer, 'integer', 'between:0,4'],
-            'state.upgrades' => ['required', 'array:wateringCan,sprinkler,plow,stable,jamMaker'],
+            'state.upgrades' => ['required', 'array:wateringCan,sprinkler,fieldIrrigation,plow,stable,jamMaker'],
             'state.upgrades.wateringCan' => ['required', $integer, 'integer', 'between:0,1'],
             'state.upgrades.sprinkler' => ['required', $boolean],
+            'state.upgrades.fieldIrrigation' => ['sometimes', $boolean],
             'state.upgrades.plow' => ['required', $boolean],
             'state.upgrades.stable' => ['required', $boolean],
             'state.upgrades.jamMaker' => ['required', $boolean],
@@ -152,6 +153,9 @@ class SaveController
                     $horse['feedBonus'] !== ($horse['feedDay'] === $day) ||
                     (!$horse['owned'] && ($horse['name'] !== '' || $horse['feedDay'] !== 0))) {
                     $validator->errors()->add('state.horse', 'Horse ownership, equipment and daily feed must agree.');
+                }
+                if (($upgrades['fieldIrrigation'] ?? false) && !$upgrades['sprinkler']) {
+                    $validator->errors()->add('state.upgrades.fieldIrrigation', 'Field irrigation requires a sprinkler.');
                 }
                 // JSON key order is irrelevant.
                 $idle = $job['input'] === null && $job['output'] === 0 && $job['readyDay'] === 0 && $job['startedDay'] === 0;

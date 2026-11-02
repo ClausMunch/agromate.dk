@@ -7,14 +7,14 @@ function freshState(){return {version:2,farmerName:'',day:1,minutes:360,money:25
  seeds:{parsnip:10,carrot:0,strawberry:0},produce:{parsnip:0,carrot:0,strawberry:0,jam:0},selectedSeed:'parsnip',
  planted:0,harvested:0,earned:0,questReward:false,player:{x:489,y:422},
  tiles:Array.from({length:28},()=>({tilled:false,crop:null,age:0,watered:false})),
- upgrades:{wateringCan:0,sprinkler:false,plow:false,stable:false,jamMaker:false},
+ upgrades:{wateringCan:0,sprinkler:false,fieldIrrigation:false,plow:false,stable:false,jamMaker:false},
  horse:{owned:false,name:'',mounted:false,feedDay:0,feedBonus:false,x:180,y:240},orders:makeOrders(),
  reservations:{parsnip:0,carrot:0,strawberry:0},processor:{input:null,output:0,readyDay:0,startedDay:0},dailyActions:{},lastNightDay:0};}
 function migrate(raw){
  if(raw==null)return freshState();
  if(!Number.isInteger(raw.version)||raw.version<1||raw.version>2)throw Error('Unsupported save version. Please update Agromate.');
  const copy=JSON.parse(JSON.stringify(raw));
- if(raw.version===2){const base=freshState();return {...copy,horse:{...base.horse,...copy.horse},reservations:{...base.reservations,...copy.reservations},orders:copy.orders?.length?copy.orders:base.orders};}
+ if(raw.version===2){const base=freshState();return {...copy,upgrades:{...base.upgrades,...copy.upgrades},horse:{...base.horse,...copy.horse},reservations:{...base.reservations,...copy.reservations},orders:copy.orders?.length?copy.orders:base.orders};}
  const base=freshState();return {...base,...copy,version:2,produce:{...copy.produce,jam:0}};
 }
 function reservedProduce(s){const result={parsnip:0,carrot:0,strawberry:0};for(const o of s.orders)if(!o.completed&&CROPS[o.crop])result[o.crop]+=Math.max(0,o.required-o.delivered);return result;}
@@ -27,15 +27,16 @@ function deliverOrder(s,id){const o=s.orders.find(o=>o.id===id),known=OFFERS.fin
 }
 function advanceDay(s){
  for(const t of s.tiles){if(t.crop&&t.watered)t.age=Math.min(CROPS[t.crop].days,t.age+1);t.watered=false;}
- if(s.upgrades.sprinkler)for(const i of SPRINKLER)if(s.tiles[i].crop&&s.tiles[i].tilled)s.tiles[i].watered=true;
+ for(const i of sprinklerCoverage(s))if(s.tiles[i].crop&&s.tiles[i].tilled)s.tiles[i].watered=true;
  if(s.horse.mounted){s.horse.x=s.player.x;s.horse.y=s.player.y;}s.horse.mounted=false;s.horse.feedBonus=false;s.horse.feedDay=0;s.dailyActions={};
  if(s.processor.input&&s.processor.readyDay===s.day+1){s.processor.input=null;s.processor.output=1;}
  s.lastNightDay=s.day;s.day++;s.minutes=360;s.energy=100;
  s.orders=s.orders.map(o=>o.completed?{...OFFERS.find(t=>t.id===o.id),delivered:0,completed:false}:o);
  return s;
 }
-const PRICES={wateringCan:350,sprinkler:600,stable:2500,plow:750,jamMaker:900};
+const PRICES={wateringCan:350,sprinkler:600,fieldIrrigation:1800,stable:2500,plow:750,jamMaker:900};
 function buy(s,key){if(!Object.hasOwn(PRICES,key))return {ok:false,error:'unknown'};
+ if(key==='fieldIrrigation'&&!s.upgrades.sprinkler)return {ok:false,error:'sprinkler_required'};
  if(key==='plow'&&!s.upgrades.stable)return {ok:false,error:'stable_required'};
  if(s.upgrades[key])return {ok:false,error:'duplicate'};
  if(s.money<PRICES[key])return {ok:false,error:'insufficient'};
@@ -52,6 +53,7 @@ function water(s,index){const targets=waterTargets(s,index),cost=targets.length*
  targets.forEach(i=>s.tiles[i].watered=true);s.energy-=cost;return {ok:true,count:targets.length,cost};
 }
 const SPRINKLER=[7,8,9,14,15,16];
+function sprinklerCoverage(s){return !s.upgrades.sprinkler?[]:s.upgrades.fieldIrrigation?s.tiles.map((_,i)=>i):SPRINKLER;}
 const speed=s=>s.horse.mounted?140:100;
 function mount(s,position,canWalk){
  if(!s.horse.owned)return {ok:false,error:'not_owned'};
@@ -85,6 +87,6 @@ function startJam(s){
 function collectJam(s){if(s.processor.output!==1)return {ok:false,error:'not_ready'};
  s.produce.jam++;s.processor={input:null,output:0,readyDay:0,startedDay:0};return {ok:true};
 }
-const api={startJam,collectJam,plowRow,feedHorse,speed,mount,SPRINKLER,waterTargets,water,PRICES,buy,advanceDay,reservedProduce,sellableProduce,deliverOrder,migrate,CROPS,OFFERS,freshState,makeOrders};
+const api={startJam,collectJam,plowRow,feedHorse,speed,mount,sprinklerCoverage,SPRINKLER,waterTargets,water,PRICES,buy,advanceDay,reservedProduce,sellableProduce,deliverOrder,migrate,CROPS,OFFERS,freshState,makeOrders};
 if(typeof module!=='undefined')module.exports=api;else root.AgromateProgression=api;
 })(typeof window==='undefined'?globalThis:window);

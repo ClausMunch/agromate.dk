@@ -95,3 +95,26 @@ test('a three-crop watering action with two energy changes neither crops nor ene
  for(const i of [0,1,7])s.tiles[i]={tilled:true,crop:'carrot',age:0,watered:false};
  const before=JSON.stringify(s);assert.equal(P.water(s,0).ok,false);assert.equal(JSON.stringify(s),before);
 });
+test('whole-field irrigation requires the sprinkler, charges once, and respects insufficient funds atomically',()=>{
+ const s=P.freshState();s.money=5000;
+ let before=JSON.stringify(s);assert.equal(P.buy(s,'fieldIrrigation').error,'sprinkler_required');assert.equal(JSON.stringify(s),before);
+ P.buy(s,'sprinkler');s.money=P.PRICES.fieldIrrigation-1;before=JSON.stringify(s);
+ assert.equal(P.buy(s,'fieldIrrigation').error,'insufficient');assert.equal(JSON.stringify(s),before);
+ s.money=P.PRICES.fieldIrrigation;assert.deepEqual(P.buy(s,'fieldIrrigation'),{ok:true,price:1800});assert.equal(s.money,0);
+ before=JSON.stringify(s);assert.equal(P.buy(s,'fieldIrrigation').error,'duplicate');assert.equal(JSON.stringify(s),before);
+});
+test('whole-field coverage matches dawn watering, preserves growth timing and survives reload',()=>{
+ const s=P.freshState();assert.deepEqual(P.sprinklerCoverage(s),[]);
+ s.money=2400;P.buy(s,'sprinkler');assert.equal(P.sprinklerCoverage(s).length,6);P.buy(s,'fieldIrrigation');
+ s.tiles=s.tiles.map(()=>({tilled:true,crop:'strawberry',age:0,watered:false}));
+ assert.deepEqual(P.sprinklerCoverage(s),Array.from({length:28},(_,i)=>i));
+ P.advanceDay(s);assert.ok(s.tiles.every(t=>t.watered&&t.age===0));
+ const loaded=P.migrate(s);assert.deepEqual(loaded,s);P.advanceDay(loaded);assert.ok(loaded.tiles.every(t=>t.watered&&t.age===1));
+ loaded.tiles[0]={tilled:false,crop:null,age:0,watered:false};P.advanceDay(loaded);
+ assert.deepEqual(loaded.tiles[0],{tilled:false,crop:null,age:0,watered:false});assert.equal(loaded.tiles[27].age,2);
+});
+test('older v2 sprinkler saves default to six-tile coverage without changing the source',()=>{
+ const old=P.freshState();delete old.upgrades.fieldIrrigation;old.upgrades.sprinkler=true;old.money=42;
+ const before=JSON.stringify(old),s=P.migrate(old);assert.equal(JSON.stringify(old),before);
+ assert.equal(s.upgrades.fieldIrrigation,false);assert.equal(s.money,42);assert.deepEqual(P.sprinklerCoverage(s),P.SPRINKLER);
+});

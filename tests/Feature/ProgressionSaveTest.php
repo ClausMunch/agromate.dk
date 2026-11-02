@@ -61,4 +61,14 @@ class ProgressionSaveTest extends \Tests\TestCase {
   $s=self::v2();$s['orders'][]=$s['orders'][0];$this->putJson('/api/save',['revision'=>0,'state'=>$s])->assertUnprocessable();
   $s=self::v2();$s['lastNightDay']=1;$this->putJson('/api/save',['revision'=>0,'state'=>$s])->assertUnprocessable();
  }
+ public function test_field_irrigation_round_trips_and_requires_a_sprinkler_and_json_boolean(): void {
+  $this->bind($this->user());
+  foreach ([true, 1, 'true', null] as $value) {
+   $s=self::v2();$s['upgrades']['fieldIrrigation']=$value;
+   $this->putJson('/api/save',['revision'=>0,'state'=>$s])->assertUnprocessable();
+  }
+  $s=self::v2();$s['upgrades']['sprinkler']=true;$s['upgrades']['fieldIrrigation']=true;
+  $this->putJson('/api/save',['revision'=>0,'state'=>$s])->assertOk()->assertJsonPath('save.state.upgrades.fieldIrrigation',true);
+  $this->getJson('/api/save')->assertOk()->assertJsonPath('save.state.upgrades.fieldIrrigation',true);
+ }
 }
