@@ -6,6 +6,7 @@ const isDialogOpen=()=>modal.open||$('account-dialog')?.open||$('scoreboard-dial
 const WORLD={w:960,h:600}, garden={x:387,y:275,cols:7,rows:4,size:29};
 const crops={parsnip:{name:'Parsnip',days:2,price:10,sell:35,color:'#eedb9c'},carrot:{name:'Carrot',days:3,price:15,sell:55,color:'#e99a46'},strawberry:{name:'Strawberry',days:4,price:25,sell:90,color:'#d96561'}};
 const P=window.AgromateProgression;
+let lifeUI=null;
 const fresh=()=>(P.freshState());
 let state=fresh(), storageOK=true, hasFarm=false, playing=false, loadError='', protectedLocalError='';
 try{const raw=JSON.parse(localStorage.getItem('agromate-save'));if(raw){state=P.migrate(raw);hasFarm=true;}}catch(error){storageOK=false;loadError=error.message;protectedLocalError=loadError;}
@@ -48,16 +49,17 @@ function updateFarmerIdle(dt, active) {
   if (!active) return;
   idleTime += dt;
   // Turning also updates the tool direction, so Space uses the tile we face.
-  if (idleTime >= .9) facing = { x: 0, y: 1 };
+  if (idleTime >= .9 && !state.horse.mounted) facing = { x: 0, y: 1 };
 }
 function drawHorse(c,x,y){
  c.save();c.translate(Math.round(x),Math.round(y));ellipse(c,0,4,20,5,'#415c3e55');
+ if(state.horse.mounted){c.scale(facing.x<0?-1:1,1);c.translate(0,ridingBob());}
  const step=moving&&state.horse.mounted?Math.sin(walk)*3:0;
  for(const [xx,off]of [[-13,step],[-6,-step],[8,-step],[14,step]]){rect(c,xx,-10,4,14+off,'#785236');rect(c,xx,2+off,5,3,'#483c32');}
  rect(c,-18,-24,35,17,'#ae784d');rect(c,-16,-23,28,5,'#c48e5e');
  poly(c,[[8,-20],[12,-37],[21,-38],[25,-24],[19,-16]],'#ae784d');
  rect(c,14,-42,4,9,'#785236');rect(c,21,-40,3,7,'#785236');rect(c,19,-34,13,8,'#c48e5e');rect(c,22,-34,2,2,'#282d28');rect(c,30,-29,2,2,'#785236');
- rect(c,10,-36,4,15,'#553e30');rect(c,-22,-24,5,20,'#553e30');rect(c,-7,-25,16,6,'#577e7b');rect(c,-4,-25,3,9,'#d5b578');
+ rect(c,10,-36,4,15,'#553e30');rect(c,-22,-24,5,20,'#553e30');rect(c,-7,-25,16,6,state.life.tack==='royal'?'#a978ad':state.life.tack==='blue'?'#668fc2':'#577e7b');rect(c,-4,-25,3,9,'#d5b578');
  if(state.upgrades.plow&&state.horse.mounted){rect(c,-34,-2,17,3,'#957343');poly(c,[[-38,-4],[-29,-4],[-31,7],[-42,7]],'#88968a');}
  c.restore();
 }
@@ -68,19 +70,27 @@ function drawStable(c){
  rect(c,155,191,35,30,'#634d36');rect(c,156,206,33,15,'#bd9961');rect(c,156,207,33,3,'#e2c38a');
  c.fillStyle='#fff0c3';c.font='8px monospace';c.textAlign='center';c.fillText('STABLE',172,187);
 }
-function farmer(c, x, y, idle) {
+function ridingBob(){return moving&&!reduced?Math.round(Math.sin(walk*2)):0;}
+function farmer(c, x, y, idle, mounted=false) {
   const turning = !reduced && !moving && idle >= .65 && idle < .9 && facing.y < 0;
-  const side = facing.x !== 0 || turning;
+  const side = mounted || facing.x !== 0 || turning;
   const back = facing.y < 0 && !turning;
   const direction = facing.x < 0 ? -1 : 1;
-  const step = moving ? Math.sin(walk) * 2 : 0;
+  const step = moving && !mounted ? Math.sin(walk) * 2 : 0;
   const breathe = !reduced && !moving && idle > 1.1 ? Math.round(Math.sin((idle - 1.1) * Math.PI * .7)) : 0;
   const blink = !reduced && !moving && idle > 1.1 && (idle - 1.1) % 5.4 > 5.23;
   c.save();
   c.translate(Math.round(x), Math.round(y));
-  ellipse(c, 0, 3, 11, 4, '#415c3e55');
+  if(!mounted)ellipse(c, 0, 3, 11, 4, '#415c3e55');
   if (side) c.scale(direction, 1);
-  if (side) {
+  if (mounted) {
+    // The hip rests on the saddle; the bent near leg hangs along the flank.
+    poly(c,[[-5,-11],[1,-12],[9,-4],[7,1],[4,8],[-1,8],[2,-2]],'#46525b');
+    rect(c,-1,7,5,5,'#624f3c');rect(c,2,9,6,3,'#71583f');
+    rect(c,-2,12,11,2,'#c5b584');
+    // Reins connect the forward hands to the bridle.
+    c.strokeStyle='#624f3c';c.lineWidth=1;c.beginPath();c.moveTo(11,-15);c.lineTo(20,-11);c.lineTo(28,-14);c.stroke();
+  } else if (side) {
     // Profile legs and boots alternate along the direction of travel.
     rect(c, -4 - step, -10, 5, 11, '#46525b');
     rect(c, 1 + step, -10, 5, 11, '#56636a');
@@ -93,13 +103,18 @@ function farmer(c, x, y, idle) {
     rect(c, 2, -step, 6, 3, '#624f3c');
   }
   // Only the upper body rises with each breath; the feet stay on the ground.
-  c.translate(0, breathe);
+  c.translate(0, mounted?0:breathe);
   if (side) {
     rect(c, -6, -24, 13, 16, '#c78b63');
     rect(c, -5, -20, 11, 12, '#678c8a');
     rect(c, 2, -23, 3, 13, '#adc0a0');
-    rect(c, -2, -22, 5, 10, '#d5a37b');
-    rect(c, -2 + step, -13, 4, 4, '#e8bd8b');
+    if(mounted){
+      poly(c,[[1,-23],[5,-21],[6,-17],[13,-17],[14,-13],[3,-13],[0,-18]],'#d5a37b');
+      rect(c,11,-17,4,4,'#e8bd8b');
+    }else{
+      rect(c, -2, -22, 5, 10, '#d5a37b');
+      rect(c, -2 + step, -13, 4, 4, '#e8bd8b');
+    }
     rect(c, -5, -36, 13, 14, '#dcb082');
     rect(c, -7, -36, 6, 15, '#805b3a');
     rect(c, -2, -36, 10, 5, '#805b3a');
@@ -186,6 +201,7 @@ function updateSeedPicker() {
 function selectTool(i,keepPicker=false){if(!keepPicker)$('seed-picker').hidePopover();tool=i;updateSeedPicker();document.querySelectorAll('.tool').forEach((el,j)=>{el.classList.toggle('active',i===j);el.setAttribute('aria-pressed',String(i===j));});$('tool-caption').innerHTML=tools[i][0].toUpperCase()+' <span>·</span> '+(i===1?crops[state.selectedSeed].name+' seeds selected':tools[i][1]);}
 function save(){if(loadError)return;if(!playing&&!hasFarm)return;if(window.AgromateCloud?.record(state)){dirty=false;return;}try{localStorage.setItem('agromate-save',JSON.stringify(state));storageOK=true;dirty=false;}catch{storageOK=false;}$('saved').textContent=storageOK?'● Saved on this device':'● Saving unavailable';}
 function update(){
+ lifeUI?.update();
  $('horse-controls').hidden=!state.horse.owned;
  $('horse-status').textContent=`${state.horse.name||'Workhorse'} · ${state.horse.mounted?'Mounted · speed 1.4×':'Resting near the stable or last dismount'} · ${state.upgrades.plow?'Plow equipped':'No plow'}${state.horse.feedBonus?' · carrot bonus: plow costs 1 energy':''}`;
  $('horse-mount').textContent=state.horse.mounted?'Dismount (M)':'Mount nearby (M)';
@@ -199,7 +215,7 @@ function effect(x,y,text,color='#fff4c6'){actionFX.push({x,y,text,color,life:1.3
 function tileAt(x,y){let col=Math.floor((x-garden.x)/29),row=Math.floor((y-garden.y)/29);return col>=0&&col<7&&row>=0&&row<4?row*7+col:null;}
 function toolTile(){return tileAt(state.player.x+facing.x*24,state.player.y+facing.y*24)??tileAt(state.player.x,state.player.y);}
 function tileCenter(i){return{x:garden.x+(i%7)*29+14,y:garden.y+Math.floor(i/7)*29+14};}
-function useTile(i){const t=state.tiles[i],pos=tileCenter(i);if(tool===4){sell();return;}if(state.energy<(tool===2&&state.upgrades.wateringCan?1:2)){toast('Time to rest. End the day to restore your energy.');return;}let message='';if(tool===0){if(t.crop){toast('Something is already growing here.');return;}if(t.tilled){toast('Ready for seeds! Select the seed packet (2).');return;}t.tilled=true;message='Fresh earth';}if(tool===1){if(!t.tilled){toast('Use the hoe (1) to prepare this soil first.');return;}if(t.crop){toast('This little patch already has a crop.');return;}if(state.seeds[state.selectedSeed]<=0){toast('Out of these seeds. Click the seed packet to choose another type, or visit the seed shop.');return;}t.crop=state.selectedSeed;t.age=0;state.seeds[t.crop]--;state.planted++;message='Planted';if(state.planted>=5&&!state.questReward){state.questReward=true;state.money+=50;toast('Small beginnings complete! A little gift: +50g.');}}if(tool===2){const result=P.water(state,i);if(!result.ok){toast('No dry crops in this pattern, or not enough energy.');return;}message=`Watered ${result.count} tiles`;}if(tool===3){if(!t.crop){toast('Nothing to gather here just yet.');return;}if(t.age<crops[t.crop].days){toast(crops[t.crop].name+': '+(crops[t.crop].days-t.age)+' watered day(s) until harvest.');return;}state.produce[t.crop]++;state.harvested++;message='+1 '+crops[t.crop].name;t.crop=null;t.age=0;t.watered=false;}if(tool!==2)state.energy-=2;state.minutes=Math.min(1190,state.minutes+5);effect(pos.x,pos.y-15,message);dirty=true;update();save();chime();}
+function useTile(i){const t=state.tiles[i],pos=tileCenter(i);if(tool===4){sell();return;}if(state.energy<(tool===2&&state.upgrades.wateringCan?1:2)){toast('Time to rest. End the day to restore your energy.');return;}let message='';if(tool===0){if(t.crop){toast('Something is already growing here.');return;}if(t.tilled){toast('Ready for seeds! Select the seed packet (2).');return;}t.tilled=true;message='Fresh earth';}if(tool===1){if(!t.tilled){toast('Use the hoe (1) to prepare this soil first.');return;}if(t.crop){toast('This little patch already has a crop.');return;}if(state.seeds[state.selectedSeed]<=0){toast('Out of these seeds. Click the seed packet to choose another type, or visit the seed shop.');return;}t.crop=state.selectedSeed;t.age=0;t.watered=P.Life.weather(state.day)==='Rain';state.seeds[t.crop]--;state.planted++;message='Planted';if(state.planted>=5&&!state.questReward){state.questReward=true;state.money+=50;toast('Small beginnings complete! A little gift: +50g.');}}if(tool===2){const result=P.water(state,i);if(!result.ok){toast('No dry crops in this pattern, or not enough energy.');return;}message=`Watered ${result.count} tiles`;}if(tool===3){if(!t.crop){toast('Nothing to gather here just yet.');return;}if(t.age<crops[t.crop].days){toast(crops[t.crop].name+': '+(crops[t.crop].days-t.age)+' watered day(s) until harvest.');return;}state.produce[t.crop]++;state.harvested++;message='+1 '+crops[t.crop].name;t.crop=null;t.age=0;t.watered=false;}if(tool!==2)state.energy-=2;state.minutes=Math.min(1190,state.minutes+5);effect(pos.x,pos.y-15,message);dirty=true;update();save();chime();}
 function sell(){let total=0,count=0;const available=P.sellableProduce(state);for(const id of Object.keys(crops)){const amount=available[id]||0;count+=amount;total+=amount*crops[id].sell;state.produce[id]-=amount;}const jam=state.produce.jam||0;count+=jam;total+=jam*180;state.produce.jam=0;if(!count){toast('Your basket is empty, or produce is reserved for an order. Deliver reserved crops from the order board.');return;}state.money+=total;state.earned+=total;effect(659,294,'+'+total+'g');toast(`Sold ${count} item${count===1?'':'s'} for ${total}g. Reserved produce stays in your basket.`);update();save();chime();}
 function horseAction(){const result=P.mount(state,state.horse,canWalk);target=null;keys.clear();toast(result.ok?(state.horse.mounted?`Mounted ${state.horse.name||'your workhorse'} · travel speed 1.4×`:'Dismounted on clear ground.'):'Stand near your horse; dismount needs clear adjacent ground.');update();save();}
 function plowAction(){const index=tileAt(state.player.x,state.player.y)??hover??tileAt(state.player.x+facing.x*24,state.player.y+facing.y*24);const result=P.plowRow(state,index);toast(result.ok?`Plowed ${result.count} tiles for ${result.cost} energy. Crops protected.`:'Mount with the plow equipped, stand by a clear garden row and keep enough energy.');update();save();}
@@ -233,7 +249,7 @@ function greetKris() {
   if (!playing || isDialogOpen() || !window.AgromateSeagull.speak(reduced)) return;
   // Clear before repeating the line so assistive technology can announce each greeting.
   $('gull-speech').textContent = '';
-  $('gull-speech').textContent = 'hey hey';
+  $('gull-speech').textContent = state.life.map?P.Life.clue(state).message:'hey hey';save();
 }
 $('kris-interact').addEventListener('click', event => {
   greetKris();
@@ -272,7 +288,7 @@ function updateActorOverlays() {
   canvas.style.cursor = overGull ? 'pointer' : 'crosshair';
 }
 
-canvas.addEventListener('pointerdown',e=>{if(!playing)return;e.preventDefault();canvas.focus({preventScroll:true});const p=worldPoint(e);if(window.AgromateSeagull.hitTest(p.x,p.y,reduced)){greetKris();return;}const i=tileAt(p.x,p.y);if(i!==null){useTile(i);return;}if(p.x>625&&p.x<690&&p.y>290&&p.y<345){sell();return;}if(p.x>289&&p.x<335&&p.y>188&&p.y<250){endDay();return;}if(canWalk(p.x,p.y))target=p;else toast('Take the path around the farmhouse and pond.');});
+canvas.addEventListener('pointerdown',e=>{if(!playing)return;e.preventDefault();canvas.focus({preventScroll:true});const p=worldPoint(e);if(window.AgromateSeagull.hitTest(p.x,p.y,reduced)){greetKris();return;}if(lifeUI?.hit(p.x,p.y))return;const i=tileAt(p.x,p.y);if(i!==null){useTile(i);return;}if(p.x>625&&p.x<690&&p.y>290&&p.y<345){sell();return;}if(p.x>289&&p.x<335&&p.y>188&&p.y<250){endDay();return;}if(canWalk(p.x,p.y))target=p;else toast('Take the path around the farmhouse and pond.');});
 $('horse-mount').onclick=horseAction;$('horse-feed').onclick=feedHorse;$('horse-plow').onclick=plowAction;
 window.addEventListener('keydown',e=>{if(!playing||isDialogOpen()||e.repeat||e.target.closest?.('input,textarea,select'))return;const k=e.key.toLowerCase();if(k==='m')horseAction();if(k==='f')feedHorse();if(k==='p')plowAction();});
 window.addEventListener('keydown',e=>{if(!playing||isDialogOpen())return;let k=e.key.toLowerCase();if(['1','2','3','4','5','arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)){pointer=null;hover=null;}if(e.target.closest?.('button, input, select, textarea, a, #seed-picker')&&[' ','enter','arrowup','arrowdown','arrowleft','arrowright'].includes(k))return;if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)){e.preventDefault();keys.add(k);target=null;}if('12345'.includes(k)&&k.length===1&&!e.repeat){const wasOpen=$('seed-picker').matches(':popover-open');selectTool(Number(k)-1);if(k==='2'&&!wasOpen)$('seed-picker').showPopover();}if(k===' '&&!e.repeat){if(tool===4)sell();else{let i=toolTile();if(i!==null)useTile(i);else toast('Use your tool on the garden squares. Click a square to reach it.');}}});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();pointer=null;hover=null;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();save();}});window.addEventListener('pagehide',save);
@@ -334,12 +350,13 @@ for(const i of preview){const p=tileCenter(i);ctx.strokeStyle='#fff1bb';ctx.line
 // scarecrow guarding the garden
 rect(ctx,613,346,3,33,'#a58a53');rect(ctx,600,346,29,4,'#9b8050');poly(ctx,[[605,342],[620,342],[625,362],[601,362]],'#ac8350');rect(ctx,608,332,11,11,'#ddc491');rect(ctx,602,331,24,4,'#bea66b');rect(ctx,608,325,12,8,'#d7c086');rect(ctx,610,337,2,2,'#695f3e');rect(ctx,617,337,2,2,'#695f3e');rect(ctx,612,342,5,4,'#b46e4d');
 // wandering hens
-for(let i=0;i<3;i++){let x=260+i*26+(reduced?0:Math.sin(now/4500+i*2)*9),y=367+i%2*15;ellipse(ctx,x,y+4,7,3,'#5a703944');rect(ctx,x-5,y-5,11,9,i===1?'#cfa976':'#e9e1b5');rect(ctx,x+3,y-9,6,8,i===1?'#dfbd8c':'#f4edc6');rect(ctx,x+4,y-11,3,3,'#c97d58');rect(ctx,x+8,y-5,3,2,'#d7a653');rect(ctx,x+6,y-7,1,1,'#50533d');rect(ctx,x-3,y+4,2,3,'#c6a05d');rect(ctx,x+2,y+4,2,3,'#c6a05d');}
+if(state.life.coop)for(let i=0;i<3;i++){let x=260+i*26+(reduced?0:Math.sin(now/4500+i*2)*9),y=367+i%2*15;ellipse(ctx,x,y+4,7,3,'#5a703944');rect(ctx,x-5,y-5,11,9,i===1?'#cfa976':'#e9e1b5');rect(ctx,x+3,y-9,6,8,i===1?'#dfbd8c':'#f4edc6');rect(ctx,x+4,y-11,3,3,'#c97d58');rect(ctx,x+8,y-5,3,2,'#d7a653');rect(ctx,x+6,y-7,1,1,'#50533d');rect(ctx,x-3,y+4,2,3,'#c6a05d');rect(ctx,x+2,y+4,2,3,'#c6a05d');}
 window.AgromateCompanions.drawGround(ctx,state.player.y,true,reduced);
 window.AgromateSeagull.drawGround(ctx,state.player.y,true,reduced);
+lifeUI?.draw(ctx,now,reduced);
 drawStable(ctx);
 if(state.horse.owned){const h=state.horse.mounted?state.player:state.horse;drawHorse(ctx,h.x,h.y);}
-farmer(ctx,state.player.x,state.player.y-(state.horse.mounted?17:0),idleTime);
+farmer(ctx,state.player.x,state.player.y+(state.horse.mounted?-14+ridingBob():0),idleTime,state.horse.mounted);
 window.AgromateCompanions.drawGround(ctx,state.player.y,false,reduced);
 window.AgromateSeagull.drawGround(ctx,state.player.y,false,reduced);
 if(target){ctx.strokeStyle='#f3e6ad88';ctx.lineWidth=1;ctx.strokeRect(target.x-4,target.y-2,8,4);}
@@ -347,6 +364,7 @@ if(!reduced){for(let i=0;i<7;i++){let x=180+(i*107+now*.009)%660,y=145+(i*59)%33
 for(const f of actionFX){f.life-=dt;f.y-=dt*14;ctx.globalAlpha=Math.min(1,f.life*2);ctx.font='9px monospace';ctx.textAlign='center';ctx.fillStyle='#4b5c3a';ctx.fillText(f.text,f.x+1,f.y+1);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y);}ctx.globalAlpha=1;actionFX=actionFX.filter(f=>f.life>0);
 if(!reduced)window.AgromateWildlife.drawSky(ctx);
 window.AgromateSeagull.drawSky(ctx,reduced);
+lifeUI?.weather(ctx,now,reduced);
 if(state.minutes>=1020){rect(ctx,0,0,960,600,`rgba(67,58,94,${Math.min(.22,(state.minutes-1020)/900)})`);}ctx.restore();updateActorOverlays();requestAnimationFrame(draw);}
 window.AgromateFarm={
   snapshot:()=>JSON.parse(JSON.stringify(state)),
@@ -356,5 +374,6 @@ window.AgromateFarm={
   reset(keepName=false){$('modal-content').innerHTML='';$('actor-nameplate').textContent='';$('actor-nameplate').hidden=true;$('toast').textContent='';const name=keepName?state.farmerName:'';state=fresh();loadError='';if(!keepName)protectedLocalError='';state.farmerName=name;hasFarm=Boolean(name);playing=false;keys.clear();target=null;actionFX=[];clockElapsed=0;selectTool(0);update();showTitle();},
   pause(){keys.clear();target=null;},
 };
+lifeUI=window.AgromateLifeUI.create({getState:()=>state,openModal,toast,save,update,escapeHTML,isPlaying:()=>playing});
 update();resize();requestAnimationFrame(draw);showTitle();
 })();

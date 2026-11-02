@@ -36,6 +36,9 @@ class SaveController
             if ($request->input('state.version') === 1 && ($slot['state']['version'] ?? 1) >= 2) {
                 return response()->json(['error' => 'client_upgrade_required'], 409);
             }
+            if (isset($slot['state']['life']) && !isset($state['life'])) {
+                return response()->json(['error' => 'client_upgrade_required'], 409);
+            }
             DB::table('cloud_saves')->updateOrInsert(['user_id' => $request->user()->id], [
                 'revision' => $revision + 1,
                 'state' => json_encode($state, JSON_THROW_ON_ERROR),
@@ -67,7 +70,7 @@ class SaveController
         };
         $rules = [
             'revision' => ['required', $integer, 'integer', 'min:0', 'max:2147483646'],
-            'state' => ['required', 'array:version,farmerName,day,minutes,money,energy,seeds,produce,selectedSeed,planted,harvested,earned,questReward,player,tiles,upgrades,horse,orders,reservations,processor,dailyActions,lastNightDay'],
+            'state' => ['required', 'array:version,farmerName,day,minutes,money,energy,seeds,produce,selectedSeed,planted,harvested,earned,questReward,player,tiles,upgrades,horse,orders,reservations,processor,dailyActions,lastNightDay,life'],
             'state.version' => ['required', $integer, 'integer', 'in:2'],
             'state.farmerName' => ['present', 'string', 'max:24'],
             'state.day' => ['required', $integer, 'integer', 'min:1', 'max:1000000'],
@@ -129,6 +132,7 @@ class SaveController
                 $rules["state.$bag.$crop"] = ['required', $integer, 'integer', 'between:0,1000000'];
             }
         }
+        if (!$legacy) $rules = array_merge($rules, FarmLifeRules::rules($integer, $boolean));
         if ($legacy) {
             $rules['state'] = ['required', 'array:version,farmerName,day,minutes,money,energy,seeds,produce,selectedSeed,planted,harvested,earned,questReward,player,tiles'];
             $rules['state.version'] = ['required', $integer, 'in:1'];
@@ -145,6 +149,7 @@ class SaveController
             }
             if (!$legacy && !$validator->errors()->any()) {
                 $state = $input['state'];
+                FarmLifeRules::check($state, $validator);
                 $templates = ['carrot-5'=>['carrot',5,320], 'parsnip-8'=>['parsnip',8,320], 'strawberry-3'=>['strawberry',3,300]];
                 $horse = $state['horse']; $upgrades = $state['upgrades']; $job = $state['processor']; $day = $state['day'];
                 if ($horse['owned'] !== $upgrades['stable'] || ($horse['mounted'] && !$horse['owned']) ||

@@ -1,5 +1,6 @@
 /* Progression domain. Behaviors are introduced through tests/frontend/progression.test.cjs. */
 (function(root){'use strict';
+const Life=typeof module!=='undefined'?require('./farm-life.js'):root.AgromateLife;
 const CROPS={parsnip:{days:2,sell:35},carrot:{days:3,sell:55},strawberry:{days:4,sell:90}};
 const OFFERS=[{id:'carrot-5',crop:'carrot',required:5,reward:320},{id:'parsnip-8',crop:'parsnip',required:8,reward:320},{id:'strawberry-3',crop:'strawberry',required:3,reward:300}];
 const makeOrders=()=>OFFERS.map(o=>({...o,delivered:0,completed:false}));
@@ -9,12 +10,12 @@ function freshState(){return {version:2,farmerName:'',day:1,minutes:360,money:25
  tiles:Array.from({length:28},()=>({tilled:false,crop:null,age:0,watered:false})),
  upgrades:{wateringCan:0,sprinkler:false,fieldIrrigation:false,plow:false,stable:false,jamMaker:false},
  horse:{owned:false,name:'',mounted:false,feedDay:0,feedBonus:false,x:180,y:240},orders:makeOrders(),
- reservations:{parsnip:0,carrot:0,strawberry:0},processor:{input:null,output:0,readyDay:0,startedDay:0},dailyActions:{},lastNightDay:0};}
+ reservations:{parsnip:0,carrot:0,strawberry:0},processor:{input:null,output:0,readyDay:0,startedDay:0},dailyActions:{},lastNightDay:0,life:Life.fresh()};}
 function migrate(raw){
  if(raw==null)return freshState();
  if(!Number.isInteger(raw.version)||raw.version<1||raw.version>2)throw Error('Unsupported save version. Please update Agromate.');
  const copy=JSON.parse(JSON.stringify(raw));
- if(raw.version===2){const base=freshState();return {...copy,upgrades:{...base.upgrades,...copy.upgrades},horse:{...base.horse,...copy.horse},reservations:{...base.reservations,...copy.reservations},orders:copy.orders?.length?copy.orders:base.orders};}
+ if(raw.version===2){const base=freshState();return {...copy,life:Life.migrate(copy.life),upgrades:{...base.upgrades,...copy.upgrades},horse:{...base.horse,...copy.horse},reservations:{...base.reservations,...copy.reservations},orders:copy.orders?.length?copy.orders:base.orders};}
  const base=freshState();return {...base,...copy,version:2,produce:{...copy.produce,jam:0}};
 }
 function reservedProduce(s){const result={parsnip:0,carrot:0,strawberry:0};for(const o of s.orders)if(!o.completed&&CROPS[o.crop])result[o.crop]+=Math.max(0,o.required-o.delivered);return result;}
@@ -26,8 +27,9 @@ function deliverOrder(s,id){const o=s.orders.find(o=>o.id===id),known=OFFERS.fin
  return {ok:true,delivered:o.required,reward:o.reward};
 }
 function advanceDay(s){
- for(const t of s.tiles){if(t.crop&&t.watered)t.age=Math.min(CROPS[t.crop].days,t.age+1);t.watered=false;}
+ for(const t of s.tiles){if(t.crop&&(t.watered||Life.weather(s.day)==='Rain'))t.age=Math.min(CROPS[t.crop].days,t.age+1);t.watered=false;}
  for(const i of sprinklerCoverage(s))if(s.tiles[i].crop&&s.tiles[i].tilled)s.tiles[i].watered=true;
+ Life.dawn(s);
  if(s.horse.mounted){s.horse.x=s.player.x;s.horse.y=s.player.y;}s.horse.mounted=false;s.horse.feedBonus=false;s.horse.feedDay=0;s.dailyActions={};
  if(s.processor.input&&s.processor.readyDay===s.day+1){s.processor.input=null;s.processor.output=1;}
  s.lastNightDay=s.day;s.day++;s.minutes=360;s.energy=100;
@@ -87,6 +89,6 @@ function startJam(s){
 function collectJam(s){if(s.processor.output!==1)return {ok:false,error:'not_ready'};
  s.produce.jam++;s.processor={input:null,output:0,readyDay:0,startedDay:0};return {ok:true};
 }
-const api={startJam,collectJam,plowRow,feedHorse,speed,mount,sprinklerCoverage,SPRINKLER,waterTargets,water,PRICES,buy,advanceDay,reservedProduce,sellableProduce,deliverOrder,migrate,CROPS,OFFERS,freshState,makeOrders};
+const api={Life,startJam,collectJam,plowRow,feedHorse,speed,mount,sprinklerCoverage,SPRINKLER,waterTargets,water,PRICES,buy,advanceDay,reservedProduce,sellableProduce,deliverOrder,migrate,CROPS,OFFERS,freshState,makeOrders};
 if(typeof module!=='undefined')module.exports=api;else root.AgromateProgression=api;
 })(typeof window==='undefined'?globalThis:window);

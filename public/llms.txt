@@ -14,10 +14,11 @@
 - Parsnips need 2 watered days, carrots 3, and strawberries 4. Unwatered crops do not advance overnight. Ending the day restores energy.
 - Move with WASD or arrow keys, click a path, or use on-screen touch controls. Select tools with 1–5. Click or tap a plot to use a tool; Space uses the selected tool in front of the farmer.
 - Select the seed packet or press 2 to choose which crop to sow.
-- The farm has animated ducks, chickens, a cat that catches mice, and a visiting seagull named Kris. Clicking or tapping Kris displays “hey hey.”
+- The farm has animated ducks, a buildable coop with three named hens, a cat that catches mice, and a visiting seagull named Kris. Clicking or tapping Kris displays “hey hey.”
 - The title screen supports farmer names and continuing an existing save. Its landscape includes occasional duck flyovers and a strolling cat.
 - Play requires JavaScript and a modern browser. Desktop, tablet, and phone controls are supported.
-- Progress and the farmer name are saved in local storage on the current browser and device. There is no account-based or cross-device synchronization. Clearing browser storage may delete a save.
+- Progress and the farmer name are saved in local storage on the current browser and device. Optional private cloud saving is available when account sign-in is configured, with explicit upload/load choices. Clearing browser storage may delete a save.
+- Seasons last 28 days; rain waters crops and snow is decorative. A seasonal bed, timed pond fishing, digging and treasure clues, stocked farm shop, decorations and horse friendship are available through the activity buttons below the farm.
 - The game is single-player. Multiplayer is not available.
 - Reduced-motion preferences are respected; ambient sound is optional.
 

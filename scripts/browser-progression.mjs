@@ -96,6 +96,7 @@ try{
    await page.locator('#horse-mount').tap();assert.equal(await page.evaluate(()=>AgromateFarm.snapshot().horse.mounted),true);
    await page.locator('#horse-feed').tap();assert.equal(await page.evaluate(()=>AgromateFarm.snapshot().horse.feedBonus),true);
    // Real CDP touch start/end exercises the on-screen movement pad.
+   await page.locator('[data-dir="down"]').scrollIntoViewIfNeeded();
    const box=await page.locator('[data-dir="down"]').boundingBox(),client=await context.newCDPSession(page);
    const y=await page.evaluate(()=>AgromateFarm.snapshot().player.y);
    await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height/2}]});
