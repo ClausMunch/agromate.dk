@@ -2,7 +2,7 @@
 (() => {
   const badge = document.getElementById('build-version');
   if (!badge) return;
-  badge.textContent = "v0.7.0 · build 9eb54f34 · 1c6533c (modified)";
-  badge.title = "Agromate 0.7.0\nBuild: 9eb54f34\nGit: 1c6533c0d54653d715b47354fe77e4bb5d14ff85\nIncludes uncommitted changes";
+  badge.textContent = "v0.7.0 · build 9eb54f34 · 75d3f94";
+  badge.title = "Agromate 0.7.0\nBuild: 9eb54f34\nGit: 75d3f9478f3d8107be2ee28440f8684aa47f43d9";
   badge.dataset.build = "9eb54f34";
 })();
