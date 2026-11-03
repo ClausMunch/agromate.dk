@@ -22,12 +22,11 @@ try{
  await page.locator('#modal .dialog-close').click();
  if(step!=='orders'){
   await page.locator('#shop').click();
-  let confirmations=0;page.on('dialog',async dialog=>{confirmations++;await dialog.dismiss();});
   await page.locator('[data-upgrade="wateringCan"]').click();
-  assert.equal(confirmations,1,'Purchase must show a confirmation');
+  assert.equal(await page.locator('#confirm-dialog').isVisible(),true,'Purchase shows an in-game confirmation');
+  await page.locator('#confirm-cancel').click();
   assert.equal(await page.evaluate(()=>AgromateFarm.snapshot().upgrades.wateringCan),0,'Cancel preserves money/ownership');
-  page.removeAllListeners('dialog');page.on('dialog',d=>d.accept());
-  await page.locator('[data-upgrade="wateringCan"]').click();
+  await page.locator('[data-upgrade="wateringCan"]').click();await page.locator('#confirm-accept').click();
   assert.equal(await page.evaluate(()=>AgromateFarm.snapshot().upgrades.wateringCan),1);
   await page.locator('#modal .dialog-close').click();
   console.log('PASS browser: confirmation cancel/accept and owned upgrade');
@@ -48,7 +47,7 @@ try{
  }
  if(['horse','jam','full'].includes(step)){
   await page.locator('#shop').click();
-  for(const id of ['stable','plow','sprinkler'])await page.locator(`[data-upgrade="${id}"]`).click();
+  for(const id of ['stable','plow','sprinkler']){await page.locator(`[data-upgrade="${id}"]`).click();await page.locator('#confirm-accept').click();}
   await page.locator('#horse-name').fill('Fern <3');await page.locator('#save-horse-name').click();assert.equal(await page.locator('#horse-name').inputValue(),'Fern <3','Horse names round-trip as text in the editor');
   await page.locator('#modal .dialog-close').click();
   await page.locator('#horse-mount').waitFor({state:'visible'});
@@ -72,7 +71,7 @@ try{
   console.log('PASS browser: named stable, mount/speed/dismount, feed, local plow, marked sprinkler');
  }
  if(['jam','full'].includes(step)){
-  await page.locator('#shop').click();await page.locator('[data-upgrade="jamMaker"]').click();await page.locator('#jam-action').click();
+  await page.locator('#shop').click();await page.locator('[data-upgrade="jamMaker"]').click();await page.locator('#confirm-accept').click();await page.locator('#jam-action').click();
   assert.equal(await page.evaluate(()=>AgromateFarm.snapshot().processor.input),'strawberry');
   await page.locator('#modal .dialog-close').click();await page.reload();await page.locator('#play').click();
   assert.equal(await page.evaluate(()=>AgromateFarm.snapshot().processor.input),'strawberry');

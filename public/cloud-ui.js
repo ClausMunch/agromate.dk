@@ -58,22 +58,29 @@ window.AgromateCloud={
 function openAccount(){farm.pause();$('account-dialog').showModal();refresh();}
 $('google-login').onclick=()=>{if(sync.loginAvailable)location.assign('/auth/google');};
 $('account-open').onclick=openAccount;$('title-account-open').onclick=openAccount;$('account-close').onclick=()=>$('account-dialog').close();
-$('cloud-load').onclick=()=>{if(confirm('Load the cloud farm? Unsynced changes to the current cloud farm will be discarded. Your local guest farm stays separate.'))run(()=>sync.load());};
+async function confirmAccount(options,action){
+ if(operation||sync.busy)return;
+ const ticket=sync.epoch,identity=sync.user?.id,mode=sync.mode;
+ const accepted=await window.AgromateConfirm({...options,owner:$('account-dialog')});
+ if(!accepted||ticket!==sync.epoch||identity!==sync.user?.id||mode!==sync.mode||operation||sync.busy)return;
+ return action();
+}
+$('cloud-load').onclick=()=>confirmAccount({title:'Load your cloud farm?',message:'Unsynced changes to the current cloud farm will be discarded.',note:'Your local guest farm stays separate.',accept:'Load cloud farm'},()=>run(()=>sync.load()));
 $('cloud-import').onclick=()=>run(()=>sync.importLocal(farm.snapshot()));
-$('cloud-replace').onclick=()=>{if(confirm('Replace the latest cloud farm with the current farm? This overwrites the one cloud slot. Any later change from another device will still cause a conflict.'))run(()=>sync.importLocal(farm.snapshot(),true));};
+$('cloud-replace').onclick=()=>confirmAccount({title:'Replace your cloud farm?',message:'The current farm will overwrite your one cloud save.',note:'A later change from another device will still cause a conflict.',accept:'Replace cloud farm',danger:true},()=>run(()=>sync.importLocal(farm.snapshot(),true)));
 $('cloud-retry').onclick=()=>run(()=>sync.flush());
-$('cloud-local').onclick=()=>{if(sync.mode!=='cloud'||confirm('Return to the local farm? This tab’s private cloud draft will be removed.')){sync.detach();render();}};
+$('cloud-local').onclick=()=>{const detach=()=>{sync.detach();render();};if(sync.mode!=='cloud')detach();else confirmAccount({title:'Return to your local farm?',message:'This tab’s private cloud draft will be removed.',note:'You can load your saved cloud farm again later.',accept:'Return to local farm'},detach);};
 $('draft-recover').onclick=()=>run(async()=>{
   await sync.refresh();const draft=drafts.read(sync.user?.id);if(!draft)return;
   const prepared=window.AgromateProgression.migrate(draft.state);farm.replace(prepared);sync.mode='cloud';sync.revision=draft.revision;sync.conflict=true;sync.pending=copy(prepared);sync.statusChange('Private draft recovered · choose Replace cloud to upload or Load cloud to discard it');
 });
 $('profile-form').onsubmit=e=>{e.preventDefault();run(async()=>{const id=sync.user.id,ticket=sync.epoch;const data=await sync.bound('/api/profile',{method:'PATCH',body:JSON.stringify({public_name:$('public-name').value.trim(),leaderboard_opt_in:$('leaderboard-opt-in').checked})},ticket,id);if(data){await sync.refresh();profileIdentity=null;sync.statusChange('Public profile saved');}});};
 $('account-logout').onclick=()=>run(async()=>{await sync.logout();announce();});
-$('account-delete').onclick=()=>{if(confirm('Permanently delete your account, public profile and cloud farm? Your local guest farm will remain.'))run(async()=>{await sync.logout(true);announce();});};
-$('farm-reset').onclick=()=>{if(confirm(`Reset the ${sync.mode==='cloud'?'cloud':'local'} farm? ${sync.mode==='cloud'?'The new farm will save to the current cloud slot.':'The local farm on this device will be erased.'}`)){
-  farm.reset(sync.mode==='cloud');if(sync.mode==='cloud'){const state=farm.snapshot();drafts.write(sync.user.id,sync.revision,state);sync.changed(state);}else{guest=null;try{localStorage.removeItem('agromate-save');$('saved').textContent='● New local farm';}catch{$('saved').textContent='● Local reset could not be saved';}}
-  $('account-dialog').close();render();
-}};
+$('account-delete').onclick=()=>confirmAccount({title:'Delete your account?',message:'Permanently delete your account, public profile and cloud farm. This cannot be undone.',note:'Your local guest farm will remain.',accept:'Delete account',danger:true},()=>run(async()=>{await sync.logout(true);announce();}));
+$('farm-reset').onclick=()=>confirmAccount({title:`Start a new ${sync.mode==='cloud'?'cloud':'local'} farm?`,message:sync.mode==='cloud'?'Your farm will be reset and saved to the current cloud slot.':'The local farm on this device will be erased.',note:'Your current progress will be lost. This cannot be undone.',accept:'Reset farm',danger:true},()=>{
+ farm.reset(sync.mode==='cloud');if(sync.mode==='cloud'){const state=farm.snapshot();drafts.write(sync.user.id,sync.revision,state);sync.changed(state);}else{guest=null;try{localStorage.removeItem('agromate-save');$('saved').textContent='● New local farm';}catch{$('saved').textContent='● Local reset could not be saved';}}
+ $('account-dialog').close();render();
+});
 async function openScoreboard(){farm.pause();$('scoreboard-dialog').showModal();$('scoreboard-entries').replaceChildren();$('scoreboard-status').textContent='Loading public farms…';const sequence=++scoreSequence;try{
   const data=await sync.request('/api/leaderboard');if(sequence!==scoreSequence)return;
   for(const entry of data.entries){const tr=document.createElement('tr');for(const text of [entry.public_name,Number(entry.score).toLocaleString()+'g']){const td=document.createElement('td');td.textContent=text;tr.append(td);}$('scoreboard-entries').append(tr);}

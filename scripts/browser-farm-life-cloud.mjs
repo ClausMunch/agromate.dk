@@ -7,13 +7,13 @@ const fixture=JSON.parse(await readFile(process.env.SESSION_FIXTURE||'/tmp/agrom
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
  const context=await browser.newContext(),page=await context.newPage(),errors=[];
- page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ page.on('pageerror',e=>errors.push(e.message));
  await context.addCookies([fixture.cookie]);
  const guest=P.freshState();guest.farmerName='Life cloud test';guest.money=5000;
  await page.addInitScript(s=>{if(!localStorage.getItem('agromate-save'))localStorage.setItem('agromate-save',JSON.stringify(s));},guest);
  await page.goto('http://127.0.0.1:8088');await page.locator('#title-account-open').click();
  await page.waitForFunction(()=>!document.getElementById('signed-in-controls').hidden);
- await page.locator('#cloud-replace').click();
+ await page.locator('#cloud-replace').click();await page.locator('#confirm-accept').click();
  await page.waitForFunction(()=>document.getElementById('cloud-mode').textContent.includes('Playing the cloud farm'));
  await page.locator('#account-close').click();await page.locator('#play').click();
  await page.locator('[data-life="hens"]').click();await page.locator('[data-action="buy-coop"]').click();
@@ -25,7 +25,7 @@ try{
  const server=await page.evaluate(async()=>{const session=await(await fetch('/api/session')).json();return(await fetch('/api/save',{headers:{'X-Account-ID':String(session.user.id)}})).json();});
  assert.deepEqual(server.save.state.life,expected);
  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('agromate-save')).life.coop),false,'Private activities preserve the guest farm');
- await page.reload();await page.locator('#title-account-open').click();await page.locator('#cloud-load').click();
+ await page.reload();await page.locator('#title-account-open').click();await page.locator('#cloud-load').click();await page.locator('#confirm-accept').click();
  await page.waitForFunction(()=>AgromateFarm.snapshot().life.hens[0]==='Cloud Hazel');
  assert.deepEqual(await page.evaluate(()=>AgromateFarm.snapshot().life),expected);assert.deepEqual(errors,[]);
  console.log('PASS: authenticated coop/name/feed/eggs autosave, real server data, explicit cloud reload, guest isolation and zero runtime errors');
