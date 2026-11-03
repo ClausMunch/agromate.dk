@@ -7,6 +7,8 @@ const WORLD={w:960,h:600}, garden={x:387,y:275,cols:7,rows:4,size:29};
 const crops={parsnip:{name:'Parsnip',days:2,price:10,sell:35,color:'#eedb9c'},carrot:{name:'Carrot',days:3,price:15,sell:55,color:'#e99a46'},strawberry:{name:'Strawberry',days:4,price:25,sell:90,color:'#d96561'}};
 const P=window.AgromateProgression;
 let lifeUI=null;
+const goalTracker=P.createGoalTracker();
+let renderedGoal='';
 const fresh=()=>(P.freshState());
 let state=fresh(), storageOK=true, hasFarm=false, playing=false, loadError='', protectedLocalError='';
 try{const raw=JSON.parse(localStorage.getItem('agromate-save'));if(raw){state=P.migrate(raw);hasFarm=true;}}catch(error){storageOK=false;loadError=error.message;protectedLocalError=loadError;}
@@ -200,6 +202,21 @@ function updateSeedPicker() {
 }
 function selectTool(i,keepPicker=false){if(!keepPicker)$('seed-picker').hidePopover();tool=i;updateSeedPicker();document.querySelectorAll('.tool').forEach((el,j)=>{el.classList.toggle('active',i===j);el.setAttribute('aria-pressed',String(i===j));});$('tool-caption').innerHTML=tools[i][0].toUpperCase()+' <span>·</span> '+(i===1?crops[state.selectedSeed].name+' seeds selected':tools[i][1]);}
 function save(){if(loadError)return;if(!playing&&!hasFarm)return;if(window.AgromateCloud?.record(state)){dirty=false;return;}try{localStorage.setItem('agromate-save',JSON.stringify(state));storageOK=true;dirty=false;}catch{storageOK=false;}$('saved').textContent=storageOK?'● Saved on this device':'● Saving unavailable';}
+function updateQuest(dt=0){
+ const goal=goalTracker.update(state,dt),key=goal?`${goal.id}:${goal.count}:${goal.completed}`:'hidden';
+ if(key===renderedGoal)return;
+ renderedGoal=key;
+ const card=$('quest');card.hidden=!goal;
+ if(!goal)return;
+ card.classList.toggle('quest-complete',goal.completed);
+ $('quest-label').textContent=goal.completed?'GOAL COMPLETE':goal.label.toUpperCase();
+ $('quest-title').textContent=goal.title;
+ $('quest-description').textContent=goal.completed?'Nicely done! A new goal is coming up.':goal.description;
+ $('quest-count').textContent=goal.completed?'✓':`${goal.count.toLocaleString()} / ${goal.target.toLocaleString()}${goal.unit||''}`;
+ $('quest-bar').style.width=`${goal.count/goal.target*100}%`;
+ $('quest-meter').setAttribute('aria-valuemax',String(goal.target));
+ $('quest-meter').setAttribute('aria-valuenow',String(goal.count));
+}
 function update(){
  lifeUI?.update();
  $('horse-controls').hidden=!state.horse.owned;
@@ -209,7 +226,7 @@ function update(){
  $('horse-feed').disabled=state.horse.feedDay===state.day||state.produce.carrot<1;
  $('sprinkler-status').hidden=!state.upgrades.sprinkler;
  $('sprinkler-status').textContent=`${state.upgrades.fieldIrrigation?'Whole-field irrigation installed. All 28':'Sprinkler installed on the west garden marker. Six'} cyan outlined tiles are watered at dawn, after overnight growth; they grow on the following watered night.`;
- updateSeedPicker(); $('day').textContent=((state.day-1)%28)+1;$('weekday').textContent=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][(state.day-1)%7]+', Year '+(Math.floor((state.day-1)/112)+1);$('money').textContent=state.money.toLocaleString();$('energy-label').textContent=state.energy+' / 100';$('energy-bar').style.width=state.energy+'%';$('amount-1').textContent=state.seeds[state.selectedSeed];$('amount-4').textContent=Object.values(state.produce).reduce((a,b)=>a+b,0)||'';let mins=Math.floor(state.minutes/10)*10,h=Math.floor(mins/60);$('time').textContent=(h%12||12)+':'+String(mins%60).padStart(2,'0')+(h>=12?' pm':' am');let count=Math.min(5,state.planted);$('quest-count').textContent=count+' / 5';$('quest-bar').style.width=count*20+'%';if(state.questReward){$('quest-title').textContent='A growing beginning';$('quest-description').textContent='Your roots are taking hold. Harvest, sell, and make this farm your own.';$('quest-count').textContent='✓';}else{$('quest-title').textContent='Put down some roots';$('quest-description').textContent='Plant your first 5 seeds. Good things take a little tending.';} }
+ updateSeedPicker(); $('day').textContent=((state.day-1)%28)+1;$('weekday').textContent=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][(state.day-1)%7]+', Year '+(Math.floor((state.day-1)/112)+1);$('money').textContent=state.money.toLocaleString();$('energy-label').textContent=state.energy+' / 100';$('energy-bar').style.width=state.energy+'%';$('amount-1').textContent=state.seeds[state.selectedSeed];$('amount-4').textContent=Object.values(state.produce).reduce((a,b)=>a+b,0)||'';let mins=Math.floor(state.minutes/10)*10,h=Math.floor(mins/60);$('time').textContent=(h%12||12)+':'+String(mins%60).padStart(2,'0')+(h>=12?' pm':' am');updateQuest(); }
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3500);}
 function effect(x,y,text,color='#fff4c6'){actionFX.push({x,y,text,color,life:1.3});}
 function tileAt(x,y){let col=Math.floor((x-garden.x)/29),row=Math.floor((y-garden.y)/29);return col>=0&&col<7&&row>=0&&row<4?row*7+col:null;}
@@ -348,7 +365,7 @@ document.querySelector('.brand').addEventListener('click', event => {event.preve
 function chime(){if(!soundEnabled||!audio)return;const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(660,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(880,audio.currentTime+.1);gain.gain.setValueAtTime(.025,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.3);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+.3);}
 let ambientNodes=[];$('sound').onclick=async()=>{try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();soundEnabled=!soundEnabled;if(soundEnabled){for(const freq of [130.81,196,261.63]){const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.value=freq;gain.gain.value=.008;osc.connect(gain).connect(audio.destination);osc.start();ambientNodes.push(osc);}chime();}else{ambientNodes.forEach(n=>n.stop());ambientNodes=[];}$('sound').classList.toggle('sound-on',soundEnabled);$('sound').setAttribute('aria-label',soundEnabled?'Disable ambient sound':'Enable ambient sound');$('sound').setAttribute('aria-pressed',String(soundEnabled));}catch{toast('Sound is unavailable in this browser.');}};
 function draw(now){const dt=Math.min((now-last)/1000||0,.05);last=now;moving=false;if(!reduced&&playing&&!isDialogOpen()&&!document.hidden){window.AgromateWildlife.update(dt);window.AgromateCompanions.update(dt);}if(playing&&!isDialogOpen()&&!document.hidden){let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dy=Number(keys.has('s')||keys.has('arrowdown'))-Number(keys.has('w')||keys.has('arrowup'));if(target&&!dx&&!dy){dx=target.x-state.player.x;dy=target.y-state.player.y;if(Math.hypot(dx,dy)<4){target=null;dx=dy=0;}}if(dx||dy){const len=Math.hypot(dx,dy);dx/=len;dy/=len;let nx=state.player.x+dx*P.speed(state)*dt,ny=state.player.y+dy*P.speed(state)*dt;const oldX=state.player.x,oldY=state.player.y;if(canWalk(nx,state.player.y))state.player.x=nx;if(canWalk(state.player.x,ny))state.player.y=ny;if(target&&oldX===state.player.x&&oldY===state.player.y)target=null;facing={x:Math.abs(dx)>Math.abs(dy)?Math.sign(dx):0,y:Math.abs(dy)>=Math.abs(dx)?Math.sign(dy):0};moving=oldX!==state.player.x||oldY!==state.player.y;if(moving){walk+=dt*12;dirty=true;}else walk=0;}else walk=0;clockElapsed+=dt;if(clockElapsed>6){clockElapsed=0;if(state.minutes<1190)state.minutes+=10;update();if(dirty)save();}}
-if(playing&&!isDialogOpen()&&!document.hidden)window.AgromateSeagull.update(dt,reduced);
+if(playing&&!isDialogOpen()&&!document.hidden){updateQuest(dt);window.AgromateSeagull.update(dt,reduced);}
 updateFarmerIdle(dt,playing&&!isDialogOpen()&&!document.hidden);
 view.x=Math.max(0,Math.min(960-view.w,state.player.x-view.w/2));view.y=Math.max(0,Math.min(600-view.h,state.player.y-view.h*.65));ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();ctx.translate(-Math.round(view.x),-Math.round(view.y));ctx.drawImage(base,0,0);window.AgromateWildlife.drawWater(ctx,reduced);
 for(let i=0;i<state.tiles.length;i++){const t=state.tiles[i],p=tileCenter(i),x=p.x-14,y=p.y-14;if(t.tilled){rect(ctx,x+1,y+1,27,27,t.watered?'#786a49':'#9a794c');rect(ctx,x+2,y+2,25,2,t.watered?'#655e44':'#866940');for(let row=0;row<3;row++)rect(ctx,x+4,y+8+row*7,20,1,t.watered?'#665d42':'#82643e');if(t.watered){rect(ctx,x+5,y+4,2,2,'#97a294');rect(ctx,x+21,y+17,2,2,'#97a294');}}crop(ctx,p.x,p.y+3,t);if(t.crop&&t.age>=crops[t.crop].days&&!reduced){const phase=(now/500+i)%4;rect(ctx,p.x+9,p.y-18+Math.sin(phase)*2,2,2,'#f6e3a4');}}

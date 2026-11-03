@@ -4,6 +4,30 @@ const Life=typeof module!=='undefined'?require('./farm-life.js'):root.AgromateLi
 const CROPS={parsnip:{days:2,sell:35},carrot:{days:3,sell:55},strawberry:{days:4,sell:90}};
 const OFFERS=[{id:'carrot-5',crop:'carrot',required:5,reward:320},{id:'parsnip-8',crop:'parsnip',required:8,reward:320},{id:'strawberry-3',crop:'strawberry',required:3,reward:300}];
 const makeOrders=()=>OFFERS.map(o=>({...o,delivered:0,completed:false}));
+// Goals use permanent counters/unlocks, so spending gold or sleeping cannot undo them.
+const FARM_GOALS=[
+ {id:'roots',label:'Small beginnings',title:'Put down some roots',description:'Plant your first 5 seeds. Good things take a little tending.',target:5,progress:s=>s.planted},
+ {id:'harvest',label:'First harvest',title:'Harvest your first crops',description:'Water your crops, sleep, then harvest your first 5 crops.',target:5,progress:s=>s.harvested},
+ {id:'earn',label:'Market day',title:'Earn your first 250g',description:'Earn 250g. Sell spare produce or deliver an order at the board.',target:250,unit:'g',progress:s=>s.earned},
+ {id:'tools',label:'A helping hand',title:'Upgrade your watering can',description:'Buy the copper watering can at the Seed & tool shop.',target:1,progress:s=>Number(s.upgrades.wateringCan>0)},
+ {id:'home',label:'Room to grow',title:'Build a farm home',description:'Build a coop, farm shop or stable. Choose your own next chapter.',target:1,progress:s=>Number(s.life.coop||s.life.stall||s.upgrades.stable)},
+ {id:'abundance',label:'A growing farm',title:'Harvest 50 crops',description:'Harvest 50 crops in total. Every little plot counts.',target:50,progress:s=>s.harvested},
+ {id:'thriving',label:'Settling in',title:'Earn 3,000g in total',description:'Earn 3,000g in total. Keep growing at your own pace.',target:3000,unit:'g',progress:s=>s.earned}
+];
+const nextFarmGoal=s=>FARM_GOALS.find(goal=>goal.progress(s)<goal.target)||null;
+function createGoalTracker(){
+ let farm=null,goal=null,completed=false,remaining=0;
+ return {update(s,dt=0){
+  if(farm!==s){farm=s;goal=nextFarmGoal(s);completed=false;remaining=0;}
+  if(!goal)return null;
+  if(goal.progress(s)>=goal.target){
+   if(!completed){completed=true;remaining=2.5;}
+   else remaining-=Math.max(0,dt);
+   if(remaining<=0){goal=nextFarmGoal(s);completed=false;if(!goal)return null;}
+  }
+  return {...goal,count:Math.min(goal.target,Math.max(0,goal.progress(s))),completed};
+ }};
+}
 function freshState(){return {version:2,farmerName:'',day:1,minutes:360,money:250,energy:100,
  seeds:{parsnip:10,carrot:0,strawberry:0},produce:{parsnip:0,carrot:0,strawberry:0,jam:0},selectedSeed:'parsnip',
  planted:0,harvested:0,earned:0,questReward:false,player:{x:489,y:422},
@@ -89,6 +113,6 @@ function startJam(s){
 function collectJam(s){if(s.processor.output!==1)return {ok:false,error:'not_ready'};
  s.produce.jam++;s.processor={input:null,output:0,readyDay:0,startedDay:0};return {ok:true};
 }
-const api={Life,startJam,collectJam,plowRow,feedHorse,speed,mount,sprinklerCoverage,SPRINKLER,waterTargets,water,PRICES,buy,advanceDay,reservedProduce,sellableProduce,deliverOrder,migrate,CROPS,OFFERS,freshState,makeOrders};
+const api={Life,FARM_GOALS,nextFarmGoal,createGoalTracker,startJam,collectJam,plowRow,feedHorse,speed,mount,sprinklerCoverage,SPRINKLER,waterTargets,water,PRICES,buy,advanceDay,reservedProduce,sellableProduce,deliverOrder,migrate,CROPS,OFFERS,freshState,makeOrders};
 if(typeof module!=='undefined')module.exports=api;else root.AgromateProgression=api;
 })(typeof window==='undefined'?globalThis:window);

@@ -118,3 +118,29 @@ test('older v2 sprinkler saves default to six-tile coverage without changing the
  const before=JSON.stringify(old),s=P.migrate(old);assert.equal(JSON.stringify(old),before);
  assert.equal(s.upgrades.fieldIrrigation,false);assert.equal(s.money,42);assert.deepEqual(P.sprinklerCoverage(s),P.SPRINKLER);
 });
+
+test('farm goals progress from seeds to harvest, earnings, improvements and a thriving farm without changing saved state',()=>{
+ const s=P.freshState(),tracker=P.createGoalTracker();
+ for(const [id,finish,next] of [
+  ['roots',()=>{s.planted=5;},'harvest'],
+  ['harvest',()=>{s.harvested=5;},'earn'],
+  ['earn',()=>{s.earned=250;},'tools'],
+  ['tools',()=>{s.upgrades.wateringCan=1;},'home'],
+  ['home',()=>{s.life.coop=true;},'abundance'],
+  ['abundance',()=>{s.harvested=50;},'thriving'],
+  ['thriving',()=>{s.earned=3000;},null]
+ ]){
+  assert.equal(tracker.update(s).id,id);finish();const before=JSON.stringify(s);
+  const done=tracker.update(s);assert.equal(done.completed,true);assert.equal(done.count,done.target);
+  assert.equal(tracker.update(s,2).id,id);assert.equal(tracker.update(s).completed,true,'No elapsed play time keeps completion visible');
+  assert.equal(tracker.update(s,.5)?.id??null,next);assert.equal(JSON.stringify(s),before,'Goals never pay extra rewards or mutate save data');
+ }
+ assert.equal(tracker.update(s,10),null);
+});
+test('restored farms skip completed goals and progress is not lost by spending money or sleeping',()=>{
+ const s=P.freshState();s.planted=20;s.harvested=30;s.earned=1000;s.money=0;s.upgrades.wateringCan=1;s.life.stall=true;
+ const t=P.createGoalTracker();assert.equal(t.update(P.migrate(s)).id,'abundance');
+ P.advanceDay(s);assert.equal(P.nextFarmGoal(s).id,'abundance');
+ s.harvested=100;s.earned=5000;assert.equal(t.update(P.migrate(s)),null);
+ assert.equal(t.update(P.freshState()).id,'roots','Changing farms clears completion state');
+});
