@@ -281,6 +281,7 @@ function greetKris() {
   // Clear before repeating the line so assistive technology can announce each greeting.
   $('gull-speech').textContent = '';
   $('gull-speech').textContent = state.life.map?P.Life.clue(state).message:'Mine!';save();
+  updateActorOverlays();
 }
 $('kris-interact').addEventListener('click', event => {
   greetKris();
@@ -313,8 +314,11 @@ function updateActorOverlays() {
   } else canvas.removeAttribute('aria-describedby');
   speech.hidden = !(visible && pose.speaking);
   if (!speech.hidden) {
-    speech.style.left = Math.max(45, Math.min(width - 45, gull.x)) + 'px';
-    speech.style.top = Math.max(24, gull.y - (overGull ? 55 : 29)) + 'px';
+    const half = speech.offsetWidth / 2;
+    const left = Math.max(half + 8, Math.min(width - half - 8, gull.x));
+    speech.style.left = left + 'px';
+    speech.style.top = Math.max(speech.offsetHeight + 8, gull.y - (overGull ? 55 : 29)) + 'px';
+    speech.style.setProperty('--speech-tail-x', Math.max(10, Math.min(speech.offsetWidth - 14, gull.x - left + half - 3)) + 'px');
   }
   canvas.style.cursor = overGull ? 'pointer' : 'crosshair';
 }
